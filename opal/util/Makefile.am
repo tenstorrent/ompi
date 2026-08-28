@@ -10,7 +10,7 @@
 # Copyright (c) 2004-2005 The Regents of the University of California.
 #                         All rights reserved.
 # Copyright (c) 2007-2022 Cisco Systems, Inc.  All rights reserved
-# Copyright (c) 2013      NVIDIA Corporation.  All rights reserved.
+# Copyright (c) 2013-2026 NVIDIA Corporation.  All rights reserved.
 # Copyright (c) 2013      Intel, Inc. All rights reserved
 # Copyright (c) 2016      Los Alamos National Security, LLC. All rights
 #                         reserved.
@@ -21,6 +21,7 @@
 #                         All Rights reserved.
 # Copyright (c) 2021      Google, LLC. All rights reserved.
 # Copyright (c) 2025      Jeffrey M. Squyres.  All rights reserved.
+# Copyright (c) 2026      Stony Brook University.  All rights reserved.
 # $COPYRIGHT$
 #
 # Additional copyrights may follow
@@ -55,7 +56,7 @@ headers = \
         bit_ops.h \
         clock_gettime.h \
         cmd_line.h \
-        crc.h \
+        count_disp_array.h \
 	ethtool.h \
         error.h \
 	event.h \
@@ -103,7 +104,6 @@ libopalutil_core_la_SOURCES = \
         basename.c \
 	bipartite_graph.c \
         cmd_line.c \
-        crc.c \
         error.c \
         fd.c \
         few.c \

@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_RECV_INIT = ompi_recv_init_f
 #pragma weak pmpi_recv_init = ompi_recv_init_f
 #pragma weak pmpi_recv_init_ = ompi_recv_init_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_RECV_INIT,
                            pmpi_recv_init,
                            pmpi_recv_init_,
                            pmpi_recv_init__,
-                           pompi_recv_init_f,
+                           ompi_recv_init_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, source, tag, comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_RECV_INIT = ompi_recv_init_f
 #pragma weak mpi_recv_init = ompi_recv_init_f
 #pragma weak mpi_recv_init_ = ompi_recv_init_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_RECV_INIT,
 #pragma weak MPI_Recv_init_f = ompi_recv_init_f
 #pragma weak MPI_Recv_init_f08 = ompi_recv_init_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_RECV_INIT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_RECV_INIT,
                            mpi_recv_init,
                            mpi_recv_init_,
                            mpi_recv_init__,
                            ompi_recv_init_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, source, tag, comm, request, ierr) )
-#else
-#define ompi_recv_init_f pompi_recv_init_f
-#endif
 #endif
 
 

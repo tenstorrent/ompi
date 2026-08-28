@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_IBSEND = ompi_ibsend_f
 #pragma weak pmpi_ibsend = ompi_ibsend_f
 #pragma weak pmpi_ibsend_ = ompi_ibsend_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IBSEND,
                            pmpi_ibsend,
                            pmpi_ibsend_,
                            pmpi_ibsend__,
-                           pompi_ibsend_f,
+                           ompi_ibsend_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, dest, tag, comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_IBSEND = ompi_ibsend_f
 #pragma weak mpi_ibsend = ompi_ibsend_f
 #pragma weak mpi_ibsend_ = ompi_ibsend_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IBSEND,
 #pragma weak MPI_Ibsend_f = ompi_ibsend_f
 #pragma weak MPI_Ibsend_f08 = ompi_ibsend_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_IBSEND,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_IBSEND,
                            mpi_ibsend,
                            mpi_ibsend_,
                            mpi_ibsend__,
                            ompi_ibsend_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, dest, tag, comm, request, ierr) )
-#else
-#define ompi_ibsend_f pompi_ibsend_f
-#endif
 #endif
 
 

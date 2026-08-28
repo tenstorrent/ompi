@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_WIN_START = ompi_win_start_f
 #pragma weak pmpi_win_start = ompi_win_start_f
 #pragma weak pmpi_win_start_ = ompi_win_start_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WIN_START,
                            pmpi_win_start,
                            pmpi_win_start_,
                            pmpi_win_start__,
-                           pompi_win_start_f,
+                           ompi_win_start_f,
                            (MPI_Fint *group, MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierr),
                            (group, assert, win, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_WIN_START = ompi_win_start_f
 #pragma weak mpi_win_start = ompi_win_start_f
 #pragma weak mpi_win_start_ = ompi_win_start_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WIN_START,
 #pragma weak MPI_Win_start_f = ompi_win_start_f
 #pragma weak MPI_Win_start_f08 = ompi_win_start_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_WIN_START,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_WIN_START,
                            mpi_win_start,
                            mpi_win_start_,
                            mpi_win_start__,
                            ompi_win_start_f,
                            (MPI_Fint *group, MPI_Fint *assert, MPI_Fint *win, MPI_Fint *ierr),
                            (group, assert, win, ierr) )
-#else
-#define ompi_win_start_f pompi_win_start_f
-#endif
 #endif
 
 

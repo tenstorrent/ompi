@@ -18,9 +18,9 @@
 #                         and Technology (RIST).  All rights reserved.
 # Copyright (c) 2016      IBM Corporation.  All rights reserved.
 # Copyright (c) 2018      FUJITSU LIMITED.  All rights reserved.
-# Copyright (c) 2021-2022 Triad National Security, LLC. All rights
+# Copyright (c) 2021-2025 Triad National Security, LLC. All rights
 #                         reserved.
-# Copyright (c) 2025      Jeffrey M. Squyres.  All rights reserved.
+# Copyright (c) 2025-2026 Jeffrey M. Squyres.  All rights reserved.
 #
 # $COPYRIGHT$
 #
@@ -31,28 +31,16 @@
 
 include $(top_srcdir)/Makefile.ompi-rules
 
-SUBDIRS = profile
-
-AM_CPPFLAGS = -DOMPI_BUILD_MPI_PROFILING=0 -DOMPI_COMPILING_FORTRAN_WRAPPERS=1
-
-# The top directory only builds MPI_* bindings and some support
-# glue. The bottom directory only builds PMPI_* bindings.  Each
-# directory is built when certain conditions are met.  If the mpif.h
-# bindings are disabled, nothing in the top or bottom directory is
-# built.
-#
-# If the mpif.h MPI API bindings are enabled, the glue functions in
-# the top directory are always built.
-#
-# The cases where the MPI API functions are build top directory needs
-# to be built are:
-#
-# 1. When profiling is disabled
-# 2. When profiling is enabled but weak symbol support is absent
-#
+# The mpif.h bindings are compiled exactly once, with
+# OMPI_BUILD_MPI_PROFILING=1: that compile emits the strong PMPI_* entry
+# points and -- via OMPI_GENERATE_WEAK_F77_BINDINGS, where the platform
+# has no weak aliases -- the weak MPI_* entry points as well.
+AM_CPPFLAGS = -DOMPI_BUILD_MPI_PROFILING=1 -DOMPI_COMPILING_FORTRAN_WRAPPERS=1
 
 lib_LTLIBRARIES =
+noinst_LTLIBRARIES =
 CLEANFILES =
+
 # Note that we invoke some OPAL functions directly in libmpi_mpifh.la,
 # so we need to link in the OPAL library directly (pulling it in
 # indirectly via libmpi.la does not work on all platforms).
@@ -65,14 +53,7 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_LDFLAGS = -version-info $(libmpi_mpifh_so_version
 
 # Are we building the mpif.h bindings at all?
 if OMPI_BUILD_FORTRAN_MPIFH_BINDINGS
-# If yes, then we need to build the installable library and the glue
-# convenience library that will be sucked up into the main libmpi.
 lib_LTLIBRARIES += lib@OMPI_LIBMPI_NAME@_mpifh.la
-# Do we need to suck in the convenience library from the lower
-# directory?
-if BUILD_PMPI_FORTRAN_MPIFH_BINDINGS_LAYER
-lib@OMPI_LIBMPI_NAME@_mpifh_la_LIBADD += profile/libmpi_mpifh_pmpi.la
-endif
 endif
 
 headers = \
@@ -80,63 +61,20 @@ headers = \
     prototypes_mpi.h \
     status-conversion.h
 
-#
-# These files are only built and added to libmpi_mpifh.la in certain cases.
-#
-lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES =
-
-# sizeof_f.f90 is generated based on some results from configure tests.
-CLEANFILES += sizeof_f.f90
-
-# If we're building the MPI_SIZEOF interfaces, generate the source
-# code in sizeof_f.f90 (via a perl script).  Normally, we'd just add
-# sizeof_f.f90 to the libmpi_mpif_la_SOURCES and be done with it.
-# However, since this is the first *actual Fortran* source that we've
-# added to libmpi_mpif_la_SOURCEs, this causes Libtool to use the
-# *Fortran* linker to create the final libmpi_mpif.la library
-# (vs. using the C linker, as it has done for years).  This exposes an
-# unfortunate bug in the Absoft linker: it does not honor the order of
-# -Wl arguments, which basically causes the resulting libmpi_mpif.so
-# to be borked.
-#
-# To get around this, we compile sizeof_f.f90 into its own LT
-# convenience library, and then we LIBADD that convenience library
-# into the main libmpi_mpifh.la.  In this way, we basically trick
-# Libtool into still using the C linker to create libmpi_mpif.la, and
-# our -Wl flags therefore don't get re-ordered.
-#
-# All this being said, we can't rely on Automake/Libtool not figuring
-# out this workaround indefinitely.  So Jeff advised Absoft to fix
-# this bug in Sep 2014.
-noinst_LTLIBRARIES=
-if BUILD_FORTRAN_SIZEOF
-noinst_LTLIBRARIES += libmpi_mpifh_sizeof.la
-# Do not dist this file; it is generated
-nodist_libmpi_mpifh_sizeof_la_SOURCES = sizeof_f.f90
-lib@OMPI_LIBMPI_NAME@_mpifh_la_LIBADD += libmpi_mpifh_sizeof.la
-endif
-
-sizeof_py = $(top_srcdir)/ompi/mpi/fortran/base/gen-mpi-sizeof.py
-
-sizeof_f.f90: $(top_builddir)/config.status
-sizeof_f.f90: $(sizeof_py)
-sizeof_f.f90:
-	$(OMPI_V_GEN) $(PYTHON) $(sizeof_py) \
-	    --impl=$@ --ierror=mandatory --mpi \
-	    --maxrank=$(OMPI_FORTRAN_MAX_ARRAY_RANK) \
-	    --generate=$(OMPI_FORTRAN_BUILD_SIZEOF) \
-	    --real2=$(OMPI_HAVE_FORTRAN_REAL2) \
-	    --iso_real16=$(OMPI_FORTRAN_HAVE_ISO_FORTRAN_ENV_REAL16) \
-	    --real16=$(OMPI_HAVE_FORTRAN_REAL16) \
-	    --complex4=$(OMPI_HAVE_FORTRAN_COMPLEX4) \
-	    --complex32=$(OMPI_HAVE_FORTRAN_COMPLEX32)
-
-if BUILD_MPI_FORTRAN_MPIFH_BINDINGS_LAYER
-lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
+lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES = \
+        abi_get_fortran_booleans_f.c \
+        abi_get_fortran_info_f.c \
+        abi_get_info_f.c \
+        abi_get_version_f.c \
+        abi_set_fortran_booleans_f.c \
+        abi_set_fortran_info_f.c \
         abort_f.c \
         add_error_class_f.c \
         add_error_code_f.c \
         add_error_string_f.c \
+        remove_error_class_f.c \
+        remove_error_code_f.c \
+        remove_error_string_f.c \
         aint_add_f.c \
         aint_diff_f.c \
         allgather_f.c \
@@ -163,6 +101,8 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         bsend_init_f.c \
         buffer_attach_f.c \
         buffer_detach_f.c \
+        buffer_flush_f.c \
+        buffer_iflush_f.c \
         cancel_f.c \
         cart_coords_f.c \
         cart_create_f.c \
@@ -174,6 +114,7 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         cart_sub_f.c \
         close_port_f.c \
         comm_accept_f.c \
+        comm_attach_buffer_f.c \
         comm_call_errhandler_f.c \
         comm_compare_f.c \
         comm_connect_f.c \
@@ -183,11 +124,14 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         comm_create_group_f.c \
         comm_create_keyval_f.c \
         comm_delete_attr_f.c \
+        comm_detach_buffer_f.c \
         comm_disconnect_f.c \
         comm_dup_f.c \
         comm_dup_with_info_f.c \
+        comm_flush_buffer_f.c \
         comm_idup_f.c \
         comm_idup_with_info_f.c \
+        comm_iflush_buffer_f.c \
         comm_free_f.c \
         comm_free_keyval_f.c \
         comm_get_attr_f.c \
@@ -210,11 +154,11 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         comm_split_f.c \
         comm_split_type_f.c \
         comm_test_inter_f.c \
+        dims_create_f.c \
         dist_graph_create_adjacent_f.c \
         dist_graph_create_f.c \
         dist_graph_neighbors_f.c \
         dist_graph_neighbors_count_f.c \
-        dims_create_f.c \
         errhandler_free_f.c \
         error_class_f.c \
         error_string_f.c \
@@ -291,6 +235,7 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         get_count_f.c \
         get_elements_f.c \
         get_elements_x_f.c \
+        get_hw_resource_info_f.c \
         get_library_version_f.c \
         get_processor_name_f.c \
         get_version_f.c \
@@ -305,8 +250,8 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         group_compare_f.c \
         group_difference_f.c \
         group_excl_f.c \
-        group_from_session_pset_f.c \
         group_free_f.c \
+        group_from_session_pset_f.c \
         group_incl_f.c \
         group_intersection_f.c \
         group_range_excl_f.c \
@@ -357,12 +302,12 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         ireduce_scatter_f.c \
         ireduce_scatter_block_f.c \
         irsend_f.c \
-        isend_f.c \
-        isendrecv_f.c \
-        isendrecv_replace_f.c \
         iscan_f.c \
         iscatter_f.c \
         iscatterv_f.c \
+        isend_f.c \
+        isendrecv_f.c \
+        isendrecv_replace_f.c \
         issend_f.c \
         is_thread_main_f.c \
         keyval_create_f.c \
@@ -407,9 +352,11 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         reduce_scatter_init_f.c \
         reduce_scatter_block_f.c \
         reduce_scatter_block_init_f.c \
-        register_datarep_f.c \
         request_free_f.c \
         request_get_status_f.c \
+        request_get_status_all_f.c \
+        request_get_status_any_f.c \
+        request_get_status_some_f.c \
         rsend_f.c \
         rsend_init_f.c \
         scan_f.c \
@@ -422,13 +369,17 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         send_init_f.c \
         sendrecv_f.c \
         sendrecv_replace_f.c \
+        session_attach_buffer_f.c \
         session_call_errhandler_f.c \
         session_create_errhandler_f.c \
+        session_detach_buffer_f.c \
+        session_flush_buffer_f.c \
         session_get_errhandler_f.c \
         session_get_info_f.c \
         session_get_nth_pset_f.c \
         session_get_num_psets_f.c \
         session_get_pset_info_f.c \
+        session_iflush_buffer_f.c \
         session_init_f.c \
         session_finalize_f.c \
         session_set_errhandler_f.c \
@@ -438,9 +389,15 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         start_f.c \
         status_f082f_f.c \
         status_f2f08_f.c \
+        status_get_error_f.c \
+        status_get_source_f.c \
+        status_get_tag_f.c \
         status_set_cancelled_f.c \
         status_set_elements_f.c \
         status_set_elements_x_f.c \
+        status_set_error_f.c \
+        status_set_source_f.c \
+        status_set_tag_f.c \
         testall_f.c \
         testany_f.c \
         test_cancelled_f.c \
@@ -473,6 +430,7 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         type_get_name_f.c \
         type_get_true_extent_f.c \
         type_get_true_extent_x_f.c \
+        type_get_value_index_f.c \
         type_indexed_f.c \
         type_match_size_f.c \
         type_set_attr_f.c \
@@ -491,6 +449,7 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         wtime_f.c \
         accumulate_f.c \
         raccumulate_f.c \
+        register_datarep_f.c \
         get_f.c \
         rget_f.c \
         get_accumulate_f.c \
@@ -552,7 +511,68 @@ lib@OMPI_LIBMPI_NAME@_mpifh_la_SOURCES += \
         type_lb_f.c \
         type_struct_f.c \
         type_ub_f.c
+
+# sizeof_f.f90 and psizeof_f.f90 are generated based on some results
+# from configure tests.
+CLEANFILES += sizeof_f.f90 psizeof_f.f90
+
+# If we're building the MPI_SIZEOF interfaces, generate the source
+# code in sizeof_f.f90 / psizeof_f.f90 (via a Python script).
+# Normally, we'd just add them to the libmpi_mpifh_la_SOURCES and be
+# done with it.  However, since these are the first *actual Fortran*
+# sources that we've added to libmpi_mpifh_la_SOURCES, this causes
+# Libtool to use the *Fortran* linker to create the final
+# libmpi_mpifh.la library (vs. using the C linker, as it has done for
+# years).  This exposes an unfortunate bug in the Absoft linker: it
+# does not honor the order of -Wl arguments, which basically causes
+# the resulting libmpi_mpifh.so to be borked.
+#
+# To get around this, we compile the sizeof sources into their own LT
+# convenience libraries, and then we LIBADD those convenience
+# libraries into the main libmpi_mpifh.la.  In this way, we basically
+# trick Libtool into still using the C linker to create
+# libmpi_mpifh.la, and our -Wl flags therefore don't get re-ordered.
+#
+# All this being said, we can't rely on Automake/Libtool not figuring
+# out this workaround indefinitely.  So Jeff advised Absoft to fix
+# this bug in Sep 2014.
+if BUILD_FORTRAN_SIZEOF
+noinst_LTLIBRARIES += libmpi_mpifh_sizeof.la libmpi_mpifh_psizeof.la
+# Do not dist these files; they are generated
+nodist_libmpi_mpifh_sizeof_la_SOURCES = sizeof_f.f90
+nodist_libmpi_mpifh_psizeof_la_SOURCES = psizeof_f.f90
+lib@OMPI_LIBMPI_NAME@_mpifh_la_LIBADD += \
+        libmpi_mpifh_sizeof.la \
+        libmpi_mpifh_psizeof.la
 endif
+
+sizeof_py = $(top_srcdir)/ompi/mpi/fortran/base/gen-mpi-sizeof.py
+
+sizeof_f.f90: $(top_builddir)/config.status
+sizeof_f.f90: $(sizeof_py)
+sizeof_f.f90:
+	$(OMPI_V_GEN) $(PYTHON) $(sizeof_py) \
+	    --impl=$@ --ierror=mandatory --mpi \
+	    --maxrank=$(OMPI_FORTRAN_MAX_ARRAY_RANK) \
+	    --generate=$(OMPI_FORTRAN_BUILD_SIZEOF) \
+	    --real2=$(OMPI_HAVE_FORTRAN_REAL2) \
+	    --iso_real16=$(OMPI_FORTRAN_HAVE_ISO_FORTRAN_ENV_REAL16) \
+	    --real16=$(OMPI_HAVE_FORTRAN_REAL16) \
+	    --complex4=$(OMPI_HAVE_FORTRAN_COMPLEX4) \
+	    --complex32=$(OMPI_HAVE_FORTRAN_COMPLEX32)
+
+psizeof_f.f90: $(top_builddir)/config.status
+psizeof_f.f90: $(sizeof_py)
+psizeof_f.f90:
+	$(OMPI_V_GEN) $(PYTHON) $(sizeof_py) \
+	    --impl=$@ --ierror=mandatory --pmpi \
+	    --maxrank=$(OMPI_FORTRAN_MAX_ARRAY_RANK) \
+	    --generate=$(OMPI_FORTRAN_BUILD_SIZEOF) \
+	    --real2=$(OMPI_HAVE_FORTRAN_REAL2) \
+	    --iso_real16=$(OMPI_FORTRAN_HAVE_ISO_FORTRAN_ENV_REAL16) \
+	    --real16=$(OMPI_HAVE_FORTRAN_REAL16) \
+	    --complex4=$(OMPI_HAVE_FORTRAN_COMPLEX4) \
+	    --complex32=$(OMPI_HAVE_FORTRAN_COMPLEX32)
 
 #
 # Conditionally install the header files

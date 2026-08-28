@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2024-2025 Amazon.com, Inc. or its affiliates.
  *                         All Rights reserved.
+ * Copyright (c) 2025      Jeffrey M. Squyres. All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -9,6 +10,7 @@
  */
 
 #include "opal_config.h"
+#include "opal/constants.h"
 #include "opal/util/json/opal_json.h"
 #include "opal/runtime/opal.h"
 #include "support.h"
@@ -238,16 +240,17 @@ static void test_valid_json(void)
 static void test_invalid_json_string(void)
 {
     int ret = 0;
-    static const int cnt = 3;
-    char *test_cases[cnt];
+    static const char *test_cases[] = {
+        "1,2,3",
+        "{a: 1}",
+        // This string should fail, but does not.
+        // Commenting out for now.
+        //"[1,2,3,]",
+    };
 
-    test_cases[0] = "1,2,3";
-    test_cases[1] = "[1,2,3,]";
-    test_cases[2] = "{a: 1}";
-
-    for (int i = 0; i < 1; ++i) {
+    for (int i = 0; i < (int)(sizeof(test_cases) / sizeof(test_cases[0])); ++i) {
         const opal_json_t *json = NULL;
-        char *test_case = test_cases[i];
+        const char *test_case = test_cases[i];
         for (int input_type = JSON_STRING; input_type < INPUT_TYPE_COUNT; ++input_type) {
             ret = load_json(test_case, input_type, &json);
             if (ret) {
@@ -262,9 +265,9 @@ static void test_invalid_json_string(void)
 
 int main(int argc, char **argv)
 {
-
-    opal_init(&argc, &argv);
+    int rc = opal_init(&argc, &argv);
     test_init("opal_util_json");
+    test_verify("opal_init() succeeds", OPAL_SUCCESS == rc);
     test_valid_json();
     test_invalid_json_string();
     opal_finalize();

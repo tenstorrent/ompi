@@ -14,6 +14,8 @@
  *                         and Technology (RIST). All rights reserved.
  * Copyright (c) 2017      IBM Corporation. All rights reserved.
  * Copyright (c) 2023      Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2026      Jeffrey M. Squyres.  All rights reserved.
+ * Copyright (c) 2026      Stony Brook University.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -34,6 +36,27 @@
 
 static OMPI_MPI_OFFSET_TYPE get_contiguous_chunk_size (ompio_file_t *, int flag);
 static int datatype_duplicate (ompi_datatype_t *oldtype, ompi_datatype_t **newtype );
+static int get_current_info_value (ompio_file_t *fh, const char *key,
+                                   opal_cstring_t **value, int *flag);
+
+static int get_current_info_value (ompio_file_t *fh, const char *key,
+                                   opal_cstring_t **value, int *flag)
+{
+    int ret;
+
+    *flag = 0;
+    *value = NULL;
+
+    if (NULL != fh->f_info) {
+        ret = opal_info_get(fh->f_info, key, value, flag);
+        if (OPAL_SUCCESS != ret) {
+            return ret;
+        }
+    }
+
+    return OMPI_SUCCESS;
+}
+
 static int datatype_duplicate  (ompi_datatype_t *oldtype, ompi_datatype_t **newtype )
 {
     ompi_datatype_t *type;
@@ -47,8 +70,8 @@ static int datatype_duplicate  (ompi_datatype_t *oldtype, ompi_datatype_t **newt
         ompi_datatype_destroy (&type);
         return MPI_ERR_INTERN;
     }
-    
-    ompi_datatype_set_args( type, 0, NULL, 0, NULL, 1, &oldtype, MPI_COMBINER_DUP );
+
+    ompi_datatype_set_args( type, 0, 0, NULL, 0, OMPI_DISP_ARRAY_NULL, 1, &oldtype, MPI_COMBINER_DUP );
 
     *newtype = type;
     return OMPI_SUCCESS;
@@ -70,7 +93,9 @@ int mca_common_ompio_set_view (ompio_file_t *fh,
                                ompi_datatype_t *etype,
                                ompi_datatype_t *filetype,
                                const char *datarep,
-                               opal_info_t *info)
+                               /* Info hints are applied by the caller through the
+                                * subscription path before this helper runs. */
+                               opal_info_t *info __opal_attribute_unused__)
 {
     int ret=OMPI_SUCCESS;
     size_t max_data = 0;
@@ -220,23 +245,14 @@ int mca_common_ompio_set_view (ompio_file_t *fh,
     }
 
     opal_cstring_t *stripe_str;
-    /* Check the info object set during File_open */
-    opal_info_get (info, "cb_nodes", &stripe_str, &flag);
+    ret = get_current_info_value(fh, "cb_nodes", &stripe_str, &flag);
+    if (OMPI_SUCCESS != ret) {
+        goto exit;
+    }
     if ( flag ) {
         sscanf ( stripe_str->string, "%d", &num_cb_nodes );
         OMPIO_MCA_PRINT_INFO(fh, "cb_nodes", stripe_str->string, "");
-        /* add the key/value to the file's info object */
-        opal_info_set_cstring(fh->f_info, "cb_nodes", stripe_str);
         OBJ_RELEASE(stripe_str);
-    }
-    else {
-        /* Check the info object set during file_set_view */
-        opal_info_get (fh->f_info, "cb_nodes", &stripe_str, &flag);
-        if ( flag ) {
-            sscanf ( stripe_str->string, "%d", &num_cb_nodes );
-            OMPIO_MCA_PRINT_INFO(fh, "cb_nodes", stripe_str->string, "");
-            OBJ_RELEASE(stripe_str);
-        }
     }
         
 
@@ -326,28 +342,18 @@ int mca_common_ompio_set_view (ompio_file_t *fh,
     }
 
     bool info_is_set=false;
-    opal_info_get (info, "collective_buffering", &stripe_str, &flag);
+    ret = get_current_info_value(fh, "collective_buffering", &stripe_str, &flag);
+    if (OMPI_SUCCESS != ret) {
+        goto exit;
+    }
     if ( flag ) {
-        if ( strncmp ( stripe_str->string, "false", sizeof("true") )){
+        if ( 0 == strncasecmp(stripe_str->string, "false", 5) ){
             info_is_set = true;
             OMPIO_MCA_PRINT_INFO(fh, "collective_buffering", stripe_str->string, "enforcing using individual fcoll component");
         } else {
             OMPIO_MCA_PRINT_INFO(fh, "collective_buffering", stripe_str->string, "");
         }
-        /* add the key/value to the file's info object */
-        opal_info_set_cstring(fh->f_info, "collective_buffering", stripe_str);
         OBJ_RELEASE(stripe_str);
-    } else {
-        opal_info_get (fh->f_info, "collective_buffering", &stripe_str, &flag);
-        if ( flag ) {
-            if ( strncmp ( stripe_str->string, "false", sizeof("true") )){
-                info_is_set = true;
-                OMPIO_MCA_PRINT_INFO(fh, "collective_buffering", stripe_str->string, "enforcing using individual fcoll component");
-            } else {
-                OMPIO_MCA_PRINT_INFO(fh, "collective_buffering", stripe_str->string, "");
-            }
-            OBJ_RELEASE(stripe_str);
-        }
     }
 
     mca_fcoll_base_component_t *preferred =NULL;

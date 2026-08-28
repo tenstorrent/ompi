@@ -56,7 +56,7 @@
  *
  * Since we made the fundamental decision to support all 4 common
  * fortran compiler symbol conventions within the same library for
- * those compilers who support weak symbols, we need to have 4 symbols
+ * those compilers who support weak aliases, we need to have 4 symbols
  * for each of the fortran address constants.  As described above, we
  * have to have known *pointer* values for the fortran addresses
  * (e.g., MPI_STATUS_IGNORE).  So when the fortran wrapper for
@@ -83,7 +83,7 @@
  *
  * I'm putting these 4 comparisons in macros (on systems where we
  * don't support the 4 symbols -- e.g., OSX, where we don't have weak
- * symbols -- it'll only be one comparison), so if anyone things of
+ * aliases -- it'll only be one comparison), so if anyone things of
  * something better than this, you should only need to modify this
  * file.
  */
@@ -95,6 +95,7 @@
 #define OMPI_F2C_IN_PLACE(addr)    (OMPI_IS_FORTRAN_IN_PLACE(addr) ? MPI_IN_PLACE : (addr))
 #define OMPI_F2C_UNWEIGHTED(addr)  (OMPI_IS_FORTRAN_UNWEIGHTED(addr) ? MPI_UNWEIGHTED : (addr))
 #define OMPI_F2C_WEIGHTS_EMPTY(addr)  (OMPI_IS_FORTRAN_WEIGHTS_EMPTY(addr) ? MPI_WEIGHTS_EMPTY : (addr))
+#define OMPI_F2C_BUFFER_AUTOMATIC(addr) (OMPI_IS_FORTRAN_BUFFER_AUTOMATIC(addr) ? MPI_BUFFER_AUTOMATIC : (addr))
 
 #endif /* OMPI_BUILD_FORTRAN_BINDINGS */
 

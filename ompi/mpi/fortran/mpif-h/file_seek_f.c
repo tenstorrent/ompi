@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_SEEK = ompi_file_seek_f
 #pragma weak pmpi_file_seek = ompi_file_seek_f
 #pragma weak pmpi_file_seek_ = ompi_file_seek_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_SEEK,
                            pmpi_file_seek,
                            pmpi_file_seek_,
                            pmpi_file_seek__,
-                           pompi_file_seek_f,
+                           ompi_file_seek_f,
                            (MPI_Fint *fh, MPI_Offset *offset, MPI_Fint *whence, MPI_Fint *ierr),
                            (fh, offset, whence, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_SEEK = ompi_file_seek_f
 #pragma weak mpi_file_seek = ompi_file_seek_f
 #pragma weak mpi_file_seek_ = ompi_file_seek_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_SEEK,
 #pragma weak MPI_File_seek_f = ompi_file_seek_f
 #pragma weak MPI_File_seek_f08 = ompi_file_seek_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_SEEK,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_SEEK,
                            mpi_file_seek,
                            mpi_file_seek_,
                            mpi_file_seek__,
                            ompi_file_seek_f,
                            (MPI_Fint *fh, MPI_Offset *offset, MPI_Fint *whence, MPI_Fint *ierr),
                            (fh, offset, whence, ierr) )
-#else
-#define ompi_file_seek_f pompi_file_seek_f
-#endif
 #endif
 
 

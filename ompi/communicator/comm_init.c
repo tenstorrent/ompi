@@ -26,7 +26,7 @@
  * Copyright (c) 2018-2024 Triad National Security, LLC. All rights
  *                         reserved.
  * Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
- * Copyright (c) 2023      NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2023-2026 NVIDIA Corporation.  All rights reserved.
  * Copyright (c) 2025      Jeffrey M. Squyres.  All rights reserved.
  * $COPYRIGHT$
  *
@@ -93,6 +93,23 @@ OBJ_CLASS_INSTANCE(ompi_communicator_t, opal_infosubscriber_t,
    process with more than one jobid. This counter is a useful
    shortcut for finalize and abort. */
 int ompi_comm_num_dyncomm=0;
+
+/*
+ * Allocate the name buffer for a predefined communicator at the MPI Forum ABI
+ * maximum (OMPI_MPI_MAX_OBJECT_NAME_ABI) rather than at the length of the short
+ * predefined literal.  ompi_comm_set_name() copies up to
+ * OMPI_MPI_MAX_OBJECT_NAME_ABI bytes into c_name, so a strdup()-sized buffer
+ * would be overflowed by a legal MPI_Comm_set_name() call on a predefined
+ * communicator.  The destructor free()s c_name, so this remains leak-free.
+ */
+static char *ompi_comm_predefined_name(const char *name)
+{
+    char *buf = (char *) malloc(OMPI_MPI_MAX_OBJECT_NAME_ABI);
+    if (NULL != buf) {
+        opal_string_copy(buf, name, OMPI_MPI_MAX_OBJECT_NAME_ABI);
+    }
+    return buf;
+}
 
 static int ompi_comm_finalize (void);
 
@@ -183,7 +200,7 @@ int ompi_comm_init(void)
     (void)opal_pointer_array_test_and_set_item(&ompi_mpi_communicators, 0, &ompi_mpi_comm_null);
     (void)opal_pointer_array_test_and_set_item(&ompi_mpi_communicators, 1, &ompi_mpi_comm_null);
 
-    ompi_mpi_comm_null.comm.c_name = strdup ("MPI_COMM_NULL");
+    ompi_mpi_comm_null.comm.c_name = ompi_comm_predefined_name("MPI_COMM_NULL");
     ompi_mpi_comm_null.comm.c_flags |= OMPI_COMM_NAMEISSET | OMPI_COMM_INTRINSIC |
         OMPI_COMM_GLOBAL_INDEX;
 
@@ -234,7 +251,7 @@ int ompi_comm_init_mpi3 (void)
     OMPI_COMM_SET_PML_ADDED(&ompi_mpi_comm_world.comm);
     opal_pointer_array_set_item (&ompi_mpi_communicators, 0, &ompi_mpi_comm_world);
 
-    ompi_mpi_comm_world.comm.c_name = strdup("MPI_COMM_WORLD");
+    ompi_mpi_comm_world.comm.c_name = ompi_comm_predefined_name("MPI_COMM_WORLD");
     ompi_mpi_comm_world.comm.c_flags |= OMPI_COMM_NAMEISSET | OMPI_COMM_INTRINSIC |
         OMPI_COMM_GLOBAL_INDEX;
     ompi_mpi_comm_world.comm.instance = group->grp_instance;
@@ -293,7 +310,7 @@ int ompi_comm_init_mpi3 (void)
     OMPI_COMM_SET_PML_ADDED(&ompi_mpi_comm_self.comm);
     opal_pointer_array_set_item (&ompi_mpi_communicators, 1, &ompi_mpi_comm_self);
 
-    ompi_mpi_comm_self.comm.c_name = strdup("MPI_COMM_SELF");
+    ompi_mpi_comm_self.comm.c_name = ompi_comm_predefined_name("MPI_COMM_SELF");
     ompi_mpi_comm_self.comm.c_flags |= OMPI_COMM_NAMEISSET | OMPI_COMM_INTRINSIC |
         OMPI_COMM_GLOBAL_INDEX;
     ompi_mpi_comm_self.comm.instance = group->grp_instance;
@@ -343,9 +360,6 @@ static int ompi_comm_finalize (void)
         /* tear down MPI-3 predefined communicators (not initialized unless using MPI_Init) */
         OBJ_DESTRUCT( &ompi_mpi_comm_self );
         ompi_attr_delete_predefined_keyvals_for_wm();
-        /* Destroy the keyhash even is user defined attributes are still attached. */
-        OBJ_DESTRUCT(ompi_mpi_comm_world.comm.c_keyhash);
-        ompi_mpi_comm_world.comm.c_keyhash = NULL;
         OBJ_DESTRUCT( &ompi_mpi_comm_world );
 
         ompi_comm_intrinsic_init = false;
@@ -388,31 +402,26 @@ static int ompi_comm_finalize (void)
     for ( i=3; i<max; i++ ) {
         comm = ompi_comm_lookup(i);
         if ( NULL != comm ) {
-            /* Communicator has not been freed before finalize */
+            /* Release the communicator. Sub-communicators retained by
+             * their parent (e.g., c_local_comm of inter-communicators)
+             * will be properly released by the parent's destructor. */
             OBJ_RELEASE(comm);
-            comm = ompi_comm_lookup(i);
-            if ( NULL != comm ) {
-                /* Still here ? */
-                if ( !OMPI_COMM_IS_EXTRA_RETAIN(comm)) {
-
-                    /* For communicator that have been marked as "extra retain", we do not further
-                     * enforce to decrease the reference counter once more. These "extra retain"
-                     * communicators created e.g. by the hierarch or inter module did increase
-                     * the reference count by one more than other communicators, on order to
-                     * allow for deallocation with the parent communicator. Note, that
-                     * this only occurs if the cid of the local_comm is lower than of its
-                     * parent communicator. Read the comment in comm_activate for
-                     * a full explanation.
-                     */
-                    if ( ompi_debug_show_handle_leaks && !(OMPI_COMM_IS_FREED(comm)) ){
-                        opal_output(0,"WARNING: MPI_Comm still allocated in MPI_Finalize\n");
-                        ompi_comm_dump ( comm);
-                        OBJ_RELEASE(comm);
-                    }
-                }
-            }
         }
     }
+
+#if OPAL_ENABLE_DEBUG
+    if ( ompi_debug_show_handle_leaks ) {
+        max = ompi_comm_get_num_communicators();
+        for ( i=3; i<max; i++ ) {
+            comm = ompi_comm_lookup(i);
+            if (NULL == comm) continue;
+            opal_output(0, "WARNING: %u(%s) unnamed MPI_Comm handles still allocated at MPI_FINALIZE",
+                        ompi_comm_get_local_cid(comm), comm->c_name);
+            ompi_comm_dump ( comm);
+            OBJ_RELEASE(comm);
+        }
+    }
+#endif  /* OPAL_ENABLE_DEBUG */
 
     OBJ_DESTRUCT (&ompi_mpi_communicators);
     OBJ_DESTRUCT (&ompi_comm_hash);
@@ -447,6 +456,7 @@ static void ompi_comm_construct(ompi_communicator_t* comm)
     comm->c_remote_group = NULL;
     comm->error_handler  = NULL;
     comm->c_pml_comm     = NULL;
+    comm->bsend_buffer   = NULL;
     comm->c_topo         = NULL;
     comm->c_coll         = NULL;
     comm->c_nbc_tag      = MCA_COLL_BASE_TAG_NONBLOCKING_BASE;
@@ -520,10 +530,22 @@ static void ompi_comm_destruct(ompi_communicator_t* comm)
         MCA_PML_CALL(del_comm (comm));
     }
 
+    /* Release the attributes */
+    if( NULL != comm->c_keyhash) {
+        OBJ_RELEASE(comm->c_keyhash);
+        comm->c_keyhash = NULL;
+    }
+
     /* Release topology module */
     if (NULL != comm->c_topo) {
         OBJ_RELEASE(comm->c_topo);
         comm->c_topo = NULL;
+    }
+
+    if (OMPI_COMM_IS_INTER(comm) && NULL != comm->c_local_comm
+        && !OMPI_COMM_IS_INTRINSIC(comm->c_local_comm)) {
+        OBJ_RELEASE(comm->c_local_comm);
+        comm->c_local_comm = NULL;
     }
 
     if (NULL != comm->c_local_group) {

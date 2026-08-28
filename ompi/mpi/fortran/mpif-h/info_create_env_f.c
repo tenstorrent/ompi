@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_INFO_CREATE_ENV = ompi_info_create_env_f
 #pragma weak pmpi_info_create_env = ompi_info_create_env_f
 #pragma weak pmpi_info_create_env_ = ompi_info_create_env_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INFO_CREATE_ENV,
                            pmpi_info_create_env,
                            pmpi_info_create_env_,
                            pmpi_info_create_env__,
-                           pompi_info_create_env_f,
+                           ompi_info_create_env_f,
                            (MPI_Fint *info, MPI_Fint *ierr),
                            (info, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_INFO_CREATE_ENV = ompi_info_create_env_f
 #pragma weak mpi_info_create_env = ompi_info_create_env_f
 #pragma weak mpi_info_create_env_ = ompi_info_create_env_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INFO_CREATE_ENV,
 #pragma weak MPI_Info_create_f = ompi_info_create_env_f
 #pragma weak MPI_Info_create_f08 = ompi_info_create_env_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_INFO_CREATE_ENV,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_INFO_CREATE_ENV,
                            mpi_info_create_env,
                            mpi_info_create_env_,
                            mpi_info_create_env__,
                            ompi_info_create_env_f,
                            (MPI_Fint *info, MPI_Fint *ierr),
                            (info, ierr) )
-#else
-#define ompi_info_create_env_f pompi_info_create_env_f
-#endif
 #endif
 
 

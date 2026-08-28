@@ -29,7 +29,7 @@
 #include "ompi/communicator/communicator.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_MRECV = ompi_mrecv_f
 #pragma weak pmpi_mrecv = ompi_mrecv_f
 #pragma weak pmpi_mrecv_ = ompi_mrecv_f
@@ -42,14 +42,14 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_MRECV,
                             pmpi_mrecv,
                             pmpi_mrecv_,
                             pmpi_mrecv__,
-                            pompi_mrecv_f,
+                            ompi_mrecv_f,
                             (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *message,
                              MPI_Fint *status, MPI_Fint *ierr),
                             (buf, count, datatype, message, status, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_MRECV = ompi_mrecv_f
 #pragma weak mpi_mrecv = ompi_mrecv_f
 #pragma weak mpi_mrecv_ = ompi_mrecv_f
@@ -58,8 +58,7 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_MRECV,
 #pragma weak MPI_Mrecv_f = ompi_mrecv_f
 #pragma weak MPI_Mrecv_f08 = ompi_mrecv_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_MRECV,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_MRECV,
                             mpi_mrecv,
                             mpi_mrecv_,
                             mpi_mrecv__,
@@ -67,9 +66,6 @@ OMPI_GENERATE_F77_BINDINGS (MPI_MRECV,
                             (char *buf, MPI_Fint *count, MPI_Fint *datatype,
                              MPI_Fint *message, MPI_Fint *status, MPI_Fint *ierr),
                             (buf, count, datatype, message, status, ierr) )
-#else
-#define ompi_mrecv_f pompi_mrecv_f
-#endif
 #endif
 
 

@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_CART_CREATE = ompi_cart_create_f
 #pragma weak pmpi_cart_create = ompi_cart_create_f
 #pragma weak pmpi_cart_create_ = ompi_cart_create_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_CART_CREATE,
                            pmpi_cart_create,
                            pmpi_cart_create_,
                            pmpi_cart_create__,
-                           pompi_cart_create_f,
+                           ompi_cart_create_f,
                            (MPI_Fint *old_comm, MPI_Fint *ndims, MPI_Fint *dims, ompi_fortran_logical_t *periods, ompi_fortran_logical_t *reorder, MPI_Fint *comm_cart, MPI_Fint *ierr),
                            (old_comm, ndims, dims, periods, reorder, comm_cart, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_CART_CREATE = ompi_cart_create_f
 #pragma weak mpi_cart_create = ompi_cart_create_f
 #pragma weak mpi_cart_create_ = ompi_cart_create_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_CART_CREATE,
 #pragma weak MPI_Cart_create_f = ompi_cart_create_f
 #pragma weak MPI_Cart_create_f08 = ompi_cart_create_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_CART_CREATE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_CART_CREATE,
                            mpi_cart_create,
                            mpi_cart_create_,
                            mpi_cart_create__,
                            ompi_cart_create_f,
                            (MPI_Fint *old_comm, MPI_Fint *ndims, MPI_Fint *dims, ompi_fortran_logical_t *periods, ompi_fortran_logical_t *reorder, MPI_Fint *comm_cart, MPI_Fint *ierr),
                            (old_comm, ndims, dims, periods, reorder, comm_cart, ierr) )
-#else
-#define ompi_cart_create_f pompi_cart_create_f
-#endif
 #endif
 
 

@@ -7,7 +7,7 @@
  *                         reserved.
  * Copyright (c) 2020-2021 Google, LLC. All rights reserved.
  * Copyright (c) 2021      Nanook Consulting.  All rights reserved.
- * Copyright (c) 2022-2023 Computer Architecture and VLSI Systems (CARV)
+ * Copyright (c) 2022-2025 Computer Architecture and VLSI Systems (CARV)
  *                         Laboratory, ICS Forth. All rights reserved.
  * $COPYRIGHT$
  *
@@ -101,17 +101,26 @@ void *mca_smsc_xpmem_map_peer_region(mca_smsc_endpoint_t *endpoint, uint64_t fla
          * does not fully cover it, we destroy it and make in its place a new one
          * that covers both the existing and the new range. */
 
-        /* The search settings below will also match areas that would be right next to
-         * the new one (technically not overlapping, but uniteable under a single area).
-         * Whether we want this is debatable (re-establishing an XPMEM attachment can
-         * incur significant overhead). The current choice matches legacy behaviour. */
+        /* The search settings below will also match areas that would be right next to the
+         * new one, which aren't technically overlapping, but are uniteable under a single
+         * area. Whether we want this is debatable, as re-establishing an XPMEM attachment
+         * can incur significant overhead. The current choice matches legacy behaviour. */
 
-        // Ideally, we would want a find() method capable of partial matching
-        uintptr_t search_base[] = {base, bound, base - 1, bound + 1};
-        for (size_t i = 0; i < sizeof(search_base)/sizeof(search_base[0]); i++) {
+        /* Ideally, we would want a find() method capable of partial matching */
+
+        uintptr_t find_base[4] = {base, bound};
+        int n_find_bases = 2;
+        if(base > 0) {
+            find_base[n_find_bases++] = base - 1;
+        }
+        if(bound < (uintptr_t) -1) {
+            find_base[n_find_bases++] = bound + 1;
+        }
+
+        for (int i = 0; i < n_find_bases; i++) {
             mca_rcache_base_registration_t *ov_reg = NULL;
 
-            rc = mca_rcache_base_vma_find(vma_module, (void *) search_base[i], 1, &ov_reg);
+            rc = mca_rcache_base_vma_find(vma_module, (void *) find_base[i], 1, &ov_reg);
             assert(OPAL_SUCCESS == rc);
 
             if (ov_reg) {
@@ -236,26 +245,46 @@ void mca_smsc_xpmem_unmap_peer_region(void *ctx)
 
 static int mca_smsc_xpmem_endpoint_rcache_entry_cleanup(mca_rcache_base_registration_t *reg, void *ctx)
 {
-    // See respective comment in mca_smsc_xpmem_map_peer_region
-    if (!(MCA_RCACHE_FLAGS_PERSIST & reg->flags))
-        opal_atomic_add(&reg->ref_count, 1);
-
-    mca_smsc_xpmem_unmap_peer_region(reg);
+    /* We aren't allowed to delete registrations inside iterate's
+     * callback. Add them to a list to delete right after. */
+    opal_list_append((opal_list_t *) ctx, &reg->super.super);
     return OPAL_SUCCESS;
 }
 
 static void mca_smsc_xpmem_cleanup_endpoint(mca_smsc_xpmem_endpoint_t *endpoint)
 {
+    mca_rcache_base_registration_t *reg;
+    opal_list_t registrations;
+
     opal_output_verbose(MCA_BASE_VERBOSE_INFO, opal_smsc_base_framework.framework_output,
                         "mca_smsc_xpmem_cleanup_endpoint: cleaning up endpoint %p", (void *) endpoint);
 
-    opal_output_verbose(MCA_BASE_VERBOSE_INFO, opal_smsc_base_framework.framework_output,
-                        "mca_smsc_xpmem_cleanup_endpoint: deleting %" PRIsize_t " region mappings",
-                        endpoint->vma_module->tree.tree_size);
+    OBJ_CONSTRUCT(&registrations, opal_list_t);
 
     /* clean out the registration cache */
     (void) mca_rcache_base_vma_iterate(endpoint->vma_module, NULL, (size_t) -1, true,
-                                       mca_smsc_xpmem_endpoint_rcache_entry_cleanup, NULL);
+                                       mca_smsc_xpmem_endpoint_rcache_entry_cleanup,
+                                       &registrations);
+
+    opal_output_verbose(MCA_BASE_VERBOSE_INFO, opal_smsc_base_framework.framework_output,
+                        "mca_smsc_xpmem_cleanup_endpoint: deleting %" PRIsize_t " region mappings",
+                        opal_list_get_size(&registrations));
+
+    while (NULL != (reg = (mca_rcache_base_registration_t *)
+            opal_list_remove_first(&registrations))) {
+
+        /* We shouldn't find any non-persistent regs during cleanup. Assuming correct
+         * usage, they should have already been unmapped and therefore removed from
+         * the tree. Nevertheless, keep with the custom (see respective comments in
+         * map_peer_region()) and add an extra reference before calling unmap? */
+        if (!(MCA_RCACHE_FLAGS_PERSIST & reg->flags)) {
+            opal_atomic_add(&reg->ref_count, 1);
+        }
+
+        mca_smsc_xpmem_unmap_peer_region(reg);
+    }
+
+    OBJ_DESTRUCT(&registrations);
 
     OBJ_RELEASE(endpoint->vma_module);
     xpmem_release(endpoint->apid);

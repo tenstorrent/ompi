@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_GATHER = ompi_gather_f
 #pragma weak pmpi_gather = ompi_gather_f
 #pragma weak pmpi_gather_ = ompi_gather_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GATHER,
                            pmpi_gather,
                            pmpi_gather_,
                            pmpi_gather__,
-                           pompi_gather_f,
+                           ompi_gather_f,
                            (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_GATHER = ompi_gather_f
 #pragma weak mpi_gather = ompi_gather_f
 #pragma weak mpi_gather_ = ompi_gather_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GATHER,
 #pragma weak MPI_Gather_f = ompi_gather_f
 #pragma weak MPI_Gather_f08 = ompi_gather_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_GATHER,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_GATHER,
                            mpi_gather,
                            mpi_gather_,
                            mpi_gather__,
                            ompi_gather_f,
                            (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm, ierr) )
-#else
-#define ompi_gather_f pompi_gather_f
-#endif
 #endif
 
 

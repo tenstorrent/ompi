@@ -26,7 +26,7 @@
 #include "ompi/file/file.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_GET_VIEW = ompi_file_get_view_f
 #pragma weak pmpi_file_get_view = ompi_file_get_view_f
 #pragma weak pmpi_file_get_view_ = ompi_file_get_view_f
@@ -39,13 +39,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_GET_VIEW,
                            pmpi_file_get_view,
                            pmpi_file_get_view_,
                            pmpi_file_get_view__,
-                           pompi_file_get_view_f,
+                           ompi_file_get_view_f,
                            (MPI_Fint *fh, MPI_Offset *disp, MPI_Fint *etype, MPI_Fint *filetype, char *datarep, MPI_Fint *ierr, int datarep_len),
                            (fh, disp, etype, filetype, datarep, ierr, datarep_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_GET_VIEW = ompi_file_get_view_f
 #pragma weak mpi_file_get_view = ompi_file_get_view_f
 #pragma weak mpi_file_get_view_ = ompi_file_get_view_f
@@ -54,17 +54,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_GET_VIEW,
 #pragma weak MPI_File_get_view_f = ompi_file_get_view_f
 #pragma weak MPI_File_get_view_f08 = ompi_file_get_view_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_GET_VIEW,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_GET_VIEW,
                            mpi_file_get_view,
                            mpi_file_get_view_,
                            mpi_file_get_view__,
                            ompi_file_get_view_f,
                            (MPI_Fint *fh, MPI_Offset *disp, MPI_Fint *etype, MPI_Fint *filetype, char *datarep, MPI_Fint *ierr, int datarep_len),
                            (fh, disp, etype, filetype, datarep, ierr, datarep_len) )
-#else
-#define ompi_file_get_view_f pompi_file_get_view_f
-#endif
 #endif
 
 

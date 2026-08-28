@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/fortran_base_strings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_CONNECT = ompi_comm_connect_f
 #pragma weak pmpi_comm_connect = ompi_comm_connect_f
 #pragma weak pmpi_comm_connect_ = ompi_comm_connect_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_CONNECT,
                            pmpi_comm_connect,
                            pmpi_comm_connect_,
                            pmpi_comm_connect__,
-                           pompi_comm_connect_f,
+                           ompi_comm_connect_f,
                            (char *port_name, MPI_Fint *info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *newcomm, MPI_Fint *ierr, int port_name_len),
                            (port_name, info, root, comm, newcomm, ierr, port_name_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_CONNECT = ompi_comm_connect_f
 #pragma weak mpi_comm_connect = ompi_comm_connect_f
 #pragma weak mpi_comm_connect_ = ompi_comm_connect_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_CONNECT,
 #pragma weak MPI_Comm_connect_f = ompi_comm_connect_f
 #pragma weak MPI_Comm_connect_f08 = ompi_comm_connect_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_CONNECT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_CONNECT,
                            mpi_comm_connect,
                            mpi_comm_connect_,
                            mpi_comm_connect__,
                            ompi_comm_connect_f,
                            (char *port_name, MPI_Fint *info, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *newcomm, MPI_Fint *ierr, int port_name_len),
                            (port_name, info, root, comm, newcomm, ierr, port_name_len) )
-#else
-#define ompi_comm_connect_f pompi_comm_connect_f
-#endif
 #endif
 
 

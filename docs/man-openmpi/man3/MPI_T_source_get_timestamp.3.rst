@@ -22,7 +22,7 @@ OUTPUT PARAMETERS
 DESCRIPTION
 -----------
 
-:ref:`MPI_T_source_get_timestamp` returns the current timestamp from the specificed source.
+:ref:`MPI_T_source_get_timestamp` returns the current timestamp from the specified source.
 
 
 ERRORS
@@ -33,3 +33,7 @@ ERRORS
 * ``MPI_T_ERR_NOT_INITIALIZED``: The MPI Tools interface not initialized
 
 * ``MPI_T_ERR_INVALID_INDEX``: The source index is invalid
+
+.. seealso::
+   * :ref:`MPI_T_Events`
+   * :ref:`MPI_T`

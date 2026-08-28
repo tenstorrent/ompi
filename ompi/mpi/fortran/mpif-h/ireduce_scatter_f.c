@@ -12,6 +12,8 @@
  * Copyright (c) 2011-2012 Cisco Systems, Inc.  All rights reserved.
  * Copyright (c) 2015      Research Organization for Information Science
  *                         and Technology (RIST). All rights reserved.
+ * Copyright (c) 2025      Triad National Security, LLC. All rights
+ *                         reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -26,7 +28,7 @@
 #include "ompi/mca/coll/base/coll_base_util.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_IREDUCE_SCATTER = ompi_ireduce_scatter_f
 #pragma weak pmpi_ireduce_scatter = ompi_ireduce_scatter_f
 #pragma weak pmpi_ireduce_scatter_ = ompi_ireduce_scatter_f
@@ -39,13 +41,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IREDUCE_SCATTER,
                             pmpi_ireduce_scatter,
                             pmpi_ireduce_scatter_,
                             pmpi_ireduce_scatter__,
-                            pompi_ireduce_scatter_f,
+                            ompi_ireduce_scatter_f,
                             (char *sendbuf, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, recvbuf, recvcounts, datatype, op, comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_IREDUCE_SCATTER = ompi_ireduce_scatter_f
 #pragma weak mpi_ireduce_scatter = ompi_ireduce_scatter_f
 #pragma weak mpi_ireduce_scatter_ = ompi_ireduce_scatter_f
@@ -54,17 +56,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IREDUCE_SCATTER,
 #pragma weak MPI_Ireduce_scatter_f = ompi_ireduce_scatter_f
 #pragma weak MPI_Ireduce_scatter_f08 = ompi_ireduce_scatter_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_IREDUCE_SCATTER,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_IREDUCE_SCATTER,
                             mpi_ireduce_scatter,
                             mpi_ireduce_scatter_,
                             mpi_ireduce_scatter__,
                             ompi_ireduce_scatter_f,
                             (char *sendbuf, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, recvbuf, recvcounts, datatype, op, comm, request, ierr) )
-#else
-#define ompi_ireduce_scatter_f pompi_ireduce_scatter_f
-#endif
 #endif
 
 
@@ -100,8 +98,9 @@ void ompi_ireduce_scatter_f(char *sendbuf, char *recvbuf,
     if ( REQUEST_COMPLETE(c_request)) {
         OMPI_ARRAY_FINT_2_INT_CLEANUP(recvcounts);
     } else {
-        ompi_coll_base_nbc_request_t* nb_request = (ompi_coll_base_nbc_request_t*)c_request;
-        nb_request->data.release_arrays[0] = recvcounts;
-        nb_request->data.release_arrays[1] = NULL;
+        if((void *)recvcounts != (void *)OMPI_ARRAY_NAME_CONVERT(recvcounts)) {
+            ompi_coll_base_append_array_to_release(c_request, recvcounts);
+            ompi_coll_base_add_release_arrays_cb(c_request);
+        }
     }
 }

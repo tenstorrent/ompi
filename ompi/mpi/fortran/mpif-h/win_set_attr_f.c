@@ -27,7 +27,7 @@
 
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_WIN_SET_ATTR = ompi_win_set_attr_f
 #pragma weak pmpi_win_set_attr = ompi_win_set_attr_f
 #pragma weak pmpi_win_set_attr_ = ompi_win_set_attr_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WIN_SET_ATTR,
                            pmpi_win_set_attr,
                            pmpi_win_set_attr_,
                            pmpi_win_set_attr__,
-                           pompi_win_set_attr_f,
+                           ompi_win_set_attr_f,
                            (MPI_Fint *win, MPI_Fint *win_keyval, MPI_Aint *attribute_val, MPI_Fint *ierr),
                            (win, win_keyval, attribute_val, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_WIN_SET_ATTR = ompi_win_set_attr_f
 #pragma weak mpi_win_set_attr = ompi_win_set_attr_f
 #pragma weak mpi_win_set_attr_ = ompi_win_set_attr_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WIN_SET_ATTR,
 #pragma weak MPI_Win_set_attr_f = ompi_win_set_attr_f
 #pragma weak MPI_Win_set_attr_f08 = ompi_win_set_attr_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_WIN_SET_ATTR,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_WIN_SET_ATTR,
                            mpi_win_set_attr,
                            mpi_win_set_attr_,
                            mpi_win_set_attr__,
                            ompi_win_set_attr_f,
                            (MPI_Fint *win, MPI_Fint *win_keyval, MPI_Aint *attribute_val, MPI_Fint *ierr),
                            (win, win_keyval, attribute_val, ierr) )
-#else
-#define ompi_win_set_attr_f pompi_win_set_attr_f
-#endif
 #endif
 
 void ompi_win_set_attr_f(MPI_Fint *win, MPI_Fint *win_keyval,

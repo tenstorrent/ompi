@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/fortran_base_strings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_CLOSE_PORT = ompi_close_port_f
 #pragma weak pmpi_close_port = ompi_close_port_f
 #pragma weak pmpi_close_port_ = ompi_close_port_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_CLOSE_PORT,
                            pmpi_close_port,
                            pmpi_close_port_,
                            pmpi_close_port__,
-                           pompi_close_port_f,
+                           ompi_close_port_f,
                            (char *port_name, MPI_Fint *ierr, int port_name_len),
                            (port_name, ierr, port_name_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_CLOSE_PORT = ompi_close_port_f
 #pragma weak mpi_close_port = ompi_close_port_f
 #pragma weak mpi_close_port_ = ompi_close_port_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_CLOSE_PORT,
 #pragma weak MPI_Close_port_f = ompi_close_port_f
 #pragma weak MPI_Close_port_f08 = ompi_close_port_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_CLOSE_PORT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_CLOSE_PORT,
                            mpi_close_port,
                            mpi_close_port_,
                            mpi_close_port__,
                            ompi_close_port_f,
                            (char *port_name, MPI_Fint *ierr, int port_name_len),
                            (port_name, ierr, port_name_len) )
-#else
-#define ompi_close_port_f pompi_close_port_f
-#endif
 #endif
 
 

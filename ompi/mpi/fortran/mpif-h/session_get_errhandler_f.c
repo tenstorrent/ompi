@@ -26,7 +26,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_SESSION_GET_ERRHANDLER = ompi_session_get_errhandler_f
 #pragma weak pmpi_session_get_errhandler = ompi_session_get_errhandler_f
 #pragma weak pmpi_session_get_errhandler_ = ompi_session_get_errhandler_f
@@ -39,13 +39,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SESSION_GET_ERRHANDLER,
                            pmpi_session_get_errhandler,
                            pmpi_session_get_errhandler_,
                            pmpi_session_get_errhandler__,
-                           pompi_session_get_errhandler_f,
+                           ompi_session_get_errhandler_f,
                            (MPI_Fint *session, MPI_Fint *erhandler, MPI_Fint *ierr),
                            (session, erhandler, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_SESSION_GET_ERRHANDLER = ompi_session_get_errhandler_f
 #pragma weak mpi_session_get_errhandler = ompi_session_get_errhandler_f
 #pragma weak mpi_session_get_errhandler_ = ompi_session_get_errhandler_f
@@ -54,17 +54,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SESSION_GET_ERRHANDLER,
 #pragma weak MPI_Session_get_errhandler_f = ompi_session_get_errhandler_f
 #pragma weak MPI_Session_get_errhandler_f08 = ompi_session_get_errhandler_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_SESSION_GET_ERRHANDLER,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_SESSION_GET_ERRHANDLER,
                            mpi_session_get_errhandler,
                            mpi_session_get_errhandler_,
                            mpi_session_get_errhandler__,
                            ompi_session_get_errhandler_f,
                            (MPI_Fint *session, MPI_Fint *erhandler, MPI_Fint *ierr),
                            (session, erhandler, ierr) )
-#else
-#define ompi_session_get_errhandler_f pompi_session_get_errhandler_f
-#endif
 #endif
 
 

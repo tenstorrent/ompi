@@ -28,7 +28,7 @@
 #include "ompi/mpi/fortran/base/fortran_base_strings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_PACK_EXTERNAL = ompi_pack_external_f
 #pragma weak pmpi_pack_external = ompi_pack_external_f
 #pragma weak pmpi_pack_external_ = ompi_pack_external_f
@@ -41,13 +41,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_PACK_EXTERNAL,
                            pmpi_pack_external,
                            pmpi_pack_external_,
                            pmpi_pack_external__,
-                           pompi_pack_external_f,
+                           ompi_pack_external_f,
                             (char *datarep, char *inbuf, MPI_Fint *incount, MPI_Fint *datatype, char *outbuf, MPI_Aint *outsize, MPI_Aint *position, MPI_Fint *ierr, int datarep_len),
                             (datarep, inbuf, incount, datatype, outbuf, outsize, position, ierr, datarep_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_PACK_EXTERNAL = ompi_pack_external_f
 #pragma weak mpi_pack_external = ompi_pack_external_f
 #pragma weak mpi_pack_external_ = ompi_pack_external_f
@@ -56,17 +56,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_PACK_EXTERNAL,
 #pragma weak MPI_Pack_external_f = ompi_pack_external_f
 #pragma weak MPI_Pack_external_f08 = ompi_pack_external_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_PACK_EXTERNAL,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_PACK_EXTERNAL,
                            mpi_pack_external,
                            mpi_pack_external_,
                            mpi_pack_external__,
                            ompi_pack_external_f,
                             (char *datarep, char *inbuf, MPI_Fint *incount, MPI_Fint *datatype, char *outbuf, MPI_Aint *outsize, MPI_Aint *position, MPI_Fint *ierr, int datarep_len),
                             (datarep, inbuf, incount, datatype, outbuf, outsize, position, ierr, datarep_len) )
-#else
-#define ompi_pack_external_f pompi_pack_external_f
-#endif
 #endif
 
 

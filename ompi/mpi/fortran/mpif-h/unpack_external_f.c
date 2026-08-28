@@ -28,7 +28,7 @@
 #include "ompi/mpi/fortran/base/fortran_base_strings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_UNPACK_EXTERNAL = ompi_unpack_external_f
 #pragma weak pmpi_unpack_external = ompi_unpack_external_f
 #pragma weak pmpi_unpack_external_ = ompi_unpack_external_f
@@ -41,13 +41,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_UNPACK_EXTERNAL,
                            pmpi_unpack_external,
                            pmpi_unpack_external_,
                            pmpi_unpack_external__,
-                           pompi_unpack_external_f,
+                           ompi_unpack_external_f,
                             (char *datarep, char *inbuf, MPI_Aint *insize, MPI_Aint *position, char *outbuf, MPI_Fint *outcount, MPI_Fint *datatype, MPI_Fint *ierr, int datarep_len),
                             (datarep, inbuf, insize, position, outbuf, outcount, datatype, ierr, datarep_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_UNPACK_EXTERNAL = ompi_unpack_external_f
 #pragma weak mpi_unpack_external = ompi_unpack_external_f
 #pragma weak mpi_unpack_external_ = ompi_unpack_external_f
@@ -56,17 +56,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_UNPACK_EXTERNAL,
 #pragma weak MPI_Unpack_external_f = ompi_unpack_external_f
 #pragma weak MPI_Unpack_external_f08 = ompi_unpack_external_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_UNPACK_EXTERNAL,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_UNPACK_EXTERNAL,
                            mpi_unpack_external,
                            mpi_unpack_external_,
                            mpi_unpack_external__,
                            ompi_unpack_external_f,
                             (char *datarep, char *inbuf, MPI_Aint *insize, MPI_Aint *position, char *outbuf, MPI_Fint *outcount, MPI_Fint *datatype, MPI_Fint *ierr, int datarep_len),
                             (datarep, inbuf, insize, position, outbuf, outcount, datatype, ierr, datarep_len) )
-#else
-#define ompi_unpack_external_f pompi_unpack_external_f
-#endif
 #endif
 
 

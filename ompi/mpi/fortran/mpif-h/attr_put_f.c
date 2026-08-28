@@ -26,7 +26,7 @@
 #include "ompi/communicator/communicator.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_ATTR_PUT = ompi_attr_put_f
 #pragma weak pmpi_attr_put = ompi_attr_put_f
 #pragma weak pmpi_attr_put_ = ompi_attr_put_f
@@ -39,13 +39,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ATTR_PUT,
                            pmpi_attr_put,
                            pmpi_attr_put_,
                            pmpi_attr_put__,
-                           pompi_attr_put_f,
+                           ompi_attr_put_f,
                            (MPI_Fint *comm, MPI_Fint *keyval, MPI_Fint *attribute_val, MPI_Fint *ierr),
                            (comm, keyval, attribute_val, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_ATTR_PUT = ompi_attr_put_f
 #pragma weak mpi_attr_put = ompi_attr_put_f
 #pragma weak mpi_attr_put_ = ompi_attr_put_f
@@ -54,17 +54,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ATTR_PUT,
 #pragma weak MPI_Attr_put_f = ompi_attr_put_f
 #pragma weak MPI_Attr_put_f08 = ompi_attr_put_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_ATTR_PUT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_ATTR_PUT,
                            mpi_attr_put,
                            mpi_attr_put_,
                            mpi_attr_put__,
                            ompi_attr_put_f,
                            (MPI_Fint *comm, MPI_Fint *keyval, MPI_Fint *attribute_val, MPI_Fint *ierr),
                            (comm, keyval, attribute_val, ierr) )
-#else
-#define ompi_attr_put_f pompi_attr_put_f
-#endif
 #endif
 
 void ompi_attr_put_f(MPI_Fint *comm, MPI_Fint *keyval, MPI_Fint *attribute_val,

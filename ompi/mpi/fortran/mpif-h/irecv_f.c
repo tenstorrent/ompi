@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_IRECV = ompi_irecv_f
 #pragma weak pmpi_irecv = ompi_irecv_f
 #pragma weak pmpi_irecv_ = ompi_irecv_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IRECV,
                            pmpi_irecv,
                            pmpi_irecv_,
                            pmpi_irecv__,
-                           pompi_irecv_f,
+                           ompi_irecv_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, source, tag, comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_IRECV = ompi_irecv_f
 #pragma weak mpi_irecv = ompi_irecv_f
 #pragma weak mpi_irecv_ = ompi_irecv_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IRECV,
 #pragma weak MPI_Irecv_f = ompi_irecv_f
 #pragma weak MPI_Irecv_f08 = ompi_irecv_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_IRECV,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_IRECV,
                            mpi_irecv,
                            mpi_irecv_,
                            mpi_irecv__,
                            ompi_irecv_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, source, tag, comm, request, ierr) )
-#else
-#define ompi_irecv_f pompi_irecv_f
-#endif
 #endif
 
 

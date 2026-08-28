@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_IBARRIER = ompi_ibarrier_f
 #pragma weak pmpi_ibarrier = ompi_ibarrier_f
 #pragma weak pmpi_ibarrier_ = ompi_ibarrier_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IBARRIER,
                             pmpi_ibarrier,
                             pmpi_ibarrier_,
                             pmpi_ibarrier__,
-                            pompi_ibarrier_f,
+                            ompi_ibarrier_f,
                             (MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_IBARRIER = ompi_ibarrier_f
 #pragma weak mpi_ibarrier = ompi_ibarrier_f
 #pragma weak mpi_ibarrier_ = ompi_ibarrier_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IBARRIER,
 #pragma weak MPI_Ibarrier_f = ompi_ibarrier_f
 #pragma weak MPI_Ibarrier_f08 = ompi_ibarrier_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_IBARRIER,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_IBARRIER,
                             mpi_ibarrier,
                             mpi_ibarrier_,
                             mpi_ibarrier__,
                             ompi_ibarrier_f,
                             (MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (comm, request, ierr) )
-#else
-#define ompi_ibarrier_f pompi_ibarrier_f
-#endif
 #endif
 
 

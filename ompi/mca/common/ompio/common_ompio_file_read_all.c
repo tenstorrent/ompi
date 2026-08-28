@@ -16,6 +16,7 @@
  * Copyright (c) 2024      Triad National Security, LLC. All rights
  *                         reserved.
  * Copyright (c) 2024      Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2026      Stony Brook University.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -24,6 +25,7 @@
  */
 
 #include "ompi_config.h"
+#include "ompi/runtime/mpiruntime.h"
 
 #include "mpi.h"
 #include "ompi/constants.h"
@@ -169,7 +171,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
         goto exit;
     }
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    start_rcomm_time = MPI_Wtime();
+    start_rcomm_time = ompi_wtime();
 #endif
     ret = ompi_fcoll_base_coll_allgather_array (&max_data,
 						1,
@@ -185,7 +187,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
         goto exit;
     }
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    end_rcomm_time = MPI_Wtime();
+    end_rcomm_time = ompi_wtime();
     rcomm_time += end_rcomm_time - start_rcomm_time;
 #endif
 
@@ -222,7 +224,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
         goto exit;
     }
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    start_rcomm_time = MPI_Wtime();
+    start_rcomm_time = ompi_wtime();
 #endif
     ret = ompi_fcoll_base_coll_allgather_array (&local_count,
 						sizeof(size_t),
@@ -239,7 +241,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
         goto exit;
     }
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    end_rcomm_time = MPI_Wtime();
+    end_rcomm_time = ompi_wtime();
     rcomm_time += end_rcomm_time - start_rcomm_time;
 #endif
 
@@ -280,7 +282,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
         }
     }
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    start_rcomm_time = MPI_Wtime();
+    start_rcomm_time = ompi_wtime();
 #endif
     ret =  ompi_fcoll_base_coll_allgatherv_array (local_iov_array,
 						  local_count,
@@ -298,7 +300,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
         goto exit;
     }
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    end_rcomm_time = MPI_Wtime();
+    end_rcomm_time = ompi_wtime();
     rcomm_time += end_rcomm_time - start_rcomm_time;
 #endif
 
@@ -411,7 +413,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
 
 
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    start_rexch = MPI_Wtime();
+    start_rexch = ompi_wtime();
 #endif
     n = 0;
     bytes_remaining = 0;
@@ -502,6 +504,9 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
          *****************************************************************/
         bytes_received = 0;
 
+        /**
+         * TODO: replace with big count?
+         */
         while (bytes_to_read_in_cycle) {
             /* This next block identifies which process is the holder
             ** of the sorted[current_index] element;
@@ -706,7 +711,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
 
 
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-            start_read_time = MPI_Wtime();
+            start_read_time = ompi_wtime();
 #endif
 
             if (fh->f_num_of_io_entries) {
@@ -734,7 +739,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
             }
 
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-            end_read_time = MPI_Wtime();
+            end_read_time = ompi_wtime();
             read_time += end_read_time - start_read_time;
 #endif
             /**********************************************************
@@ -767,15 +772,15 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
             }
 
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-            start_rcomm_time = MPI_Wtime();
+            start_rcomm_time = ompi_wtime();
 #endif
             for (i=0;i<fh->f_procs_per_group;i++){
                 size_t datatype_size;
                 send_req[i] = MPI_REQUEST_NULL;
                 if ( 0 < disp_index[i] ) {
                     ompi_datatype_create_hindexed(disp_index[i],
-                                                  blocklen_per_process[i],
-                                                  displs_per_process[i],
+                                                  OMPI_COUNT_ARRAY_CREATE(blocklen_per_process[i]),
+                                                  OMPI_DISP_ARRAY_CREATE(displs_per_process[i]),
                                                   MPI_BYTE,
                                                   &sendtype[i]);
                     ompi_datatype_commit(&sendtype[i]);
@@ -797,7 +802,7 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
                 }
             }
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-            end_rcomm_time = MPI_Wtime();
+            end_rcomm_time = ompi_wtime();
             rcomm_time += end_rcomm_time - start_rcomm_time;
 #endif
         }
@@ -854,14 +859,14 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
             }
 
             ompi_datatype_create_hindexed(block_index+1,
-                                          blocklength_proc,
-                                          displs_proc,
+                                          OMPI_COUNT_ARRAY_CREATE(blocklength_proc),
+                                          OMPI_DISP_ARRAY_CREATE(displs_proc),
                                           MPI_BYTE,
                                           &newType);
             ompi_datatype_commit(&newType);
 
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-            start_rcomm_time = MPI_Wtime();
+            start_rcomm_time = ompi_wtime();
 #endif
             ret = MCA_PML_CALL(irecv((char *)recv_mem_address,
                                      1,
@@ -896,14 +901,14 @@ mca_common_ompio_base_file_read_all (struct ompio_file_t *fh,
 
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
         if(bytes_received) {
-            end_rcomm_time = MPI_Wtime();
+            end_rcomm_time = ompi_wtime();
             rcomm_time += end_rcomm_time - start_rcomm_time;
         }
 #endif
     } /* end for (index=0; index < cycles; index ++) */
 
 #if OMPIO_FCOLL_WANT_TIME_BREAKDOWN
-    end_rexch = MPI_Wtime();
+    end_rexch = ompi_wtime();
     read_exch += end_rexch - start_rexch;
     nentry.time[0] = read_time;
     nentry.time[1] = rcomm_time;

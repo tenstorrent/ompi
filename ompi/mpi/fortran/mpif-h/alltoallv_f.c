@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_ALLTOALLV = ompi_alltoallv_f
 #pragma weak pmpi_alltoallv = ompi_alltoallv_f
 #pragma weak pmpi_alltoallv_ = ompi_alltoallv_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ALLTOALLV,
                            pmpi_alltoallv,
                            pmpi_alltoallv_,
                            pmpi_alltoallv__,
-                           pompi_alltoallv_f,
+                           ompi_alltoallv_f,
                            (char *sendbuf, MPI_Fint *sendcounts, MPI_Fint *sdispls, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *rdispls, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_ALLTOALLV = ompi_alltoallv_f
 #pragma weak mpi_alltoallv = ompi_alltoallv_f
 #pragma weak mpi_alltoallv_ = ompi_alltoallv_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ALLTOALLV,
 #pragma weak MPI_Alltoallv_f = ompi_alltoallv_f
 #pragma weak MPI_Alltoallv_f08 = ompi_alltoallv_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_ALLTOALLV,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_ALLTOALLV,
                            mpi_alltoallv,
                            mpi_alltoallv_,
                            mpi_alltoallv__,
                            ompi_alltoallv_f,
                            (char *sendbuf, MPI_Fint *sendcounts, MPI_Fint *sdispls, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *rdispls, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm, ierr) )
-#else
-#define ompi_alltoallv_f pompi_alltoallv_f
-#endif
 #endif
 
 

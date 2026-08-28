@@ -25,7 +25,7 @@
 #include "ompi/group/group.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_GROUP_DIFFERENCE = ompi_group_difference_f
 #pragma weak pmpi_group_difference = ompi_group_difference_f
 #pragma weak pmpi_group_difference_ = ompi_group_difference_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GROUP_DIFFERENCE,
                            pmpi_group_difference,
                            pmpi_group_difference_,
                            pmpi_group_difference__,
-                           pompi_group_difference_f,
+                           ompi_group_difference_f,
                            (MPI_Fint *group1, MPI_Fint *group2, MPI_Fint *newgroup, MPI_Fint *ierr),
                            (group1, group2, newgroup, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_GROUP_DIFFERENCE = ompi_group_difference_f
 #pragma weak mpi_group_difference = ompi_group_difference_f
 #pragma weak mpi_group_difference_ = ompi_group_difference_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GROUP_DIFFERENCE,
 #pragma weak MPI_Group_difference_f = ompi_group_difference_f
 #pragma weak MPI_Group_difference_f08 = ompi_group_difference_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_GROUP_DIFFERENCE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_GROUP_DIFFERENCE,
                            mpi_group_difference,
                            mpi_group_difference_,
                            mpi_group_difference__,
                            ompi_group_difference_f,
                            (MPI_Fint *group1, MPI_Fint *group2, MPI_Fint *newgroup, MPI_Fint *ierr),
                            (group1, group2, newgroup, ierr) )
-#else
-#define ompi_group_difference_f pompi_group_difference_f
-#endif
 #endif
 
 

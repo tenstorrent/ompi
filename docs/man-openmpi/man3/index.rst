@@ -4,6 +4,12 @@ MPI API manual pages (section 3)
 .. toctree::
    :maxdepth: 1
 
+   MPI_Abi_get_fortran_booleans.3.rst
+   MPI_Abi_get_fortran_info.3.rst
+   MPI_Abi_get_info.3.rst
+   MPI_Abi_get_version.3.rst
+   MPI_Abi_set_fortran_booleans.3.rst
+   MPI_Abi_set_fortran_info.3.rst
    MPI_Abort.3.rst
    MPI_Accumulate.3.rst
    MPI_Add_error_class.3.rst
@@ -36,6 +42,8 @@ MPI API manual pages (section 3)
    MPI_Bsend_init.3.rst
    MPI_Buffer_attach.3.rst
    MPI_Buffer_detach.3.rst
+   MPI_Buffer_flush.3.rst
+   MPI_Buffer_iflush.3.rst
    MPI_Cancel.3.rst
    MPI_Cart_coords.3.rst
    MPI_Cart_create.3.rst
@@ -47,6 +55,7 @@ MPI API manual pages (section 3)
    MPI_Cartdim_get.3.rst
    MPI_Close_port.3.rst
    MPI_Comm_accept.3.rst
+   MPI_Comm_attach_buffer.3.rst
    MPI_Comm_c2f.3.rst
    MPI_Comm_call_errhandler.3.rst
    MPI_Comm_compare.3.rst
@@ -57,12 +66,15 @@ MPI API manual pages (section 3)
    MPI_Comm_create_group.3.rst
    MPI_Comm_create_keyval.3.rst
    MPI_Comm_delete_attr.3.rst
+   MPI_Comm_detach_buffer.3.rst
    MPI_Comm_disconnect.3.rst
    MPI_Comm_dup.3.rst
    MPI_Comm_dup_with_info.3.rst
    MPI_Comm_f2c.3.rst
+   MPI_Comm_flush_buffer.3.rst
    MPI_Comm_free.3.rst
    MPI_Comm_free_keyval.3.rst
+   MPI_Comm_fromint.3.rst
    MPI_Comm_get_attr.3.rst
    MPI_Comm_get_errhandler.3.rst
    MPI_Comm_get_info.3.rst
@@ -71,6 +83,7 @@ MPI API manual pages (section 3)
    MPI_Comm_group.3.rst
    MPI_Comm_idup.3.rst
    MPI_Comm_idup_with_info.3.rst
+   MPI_Comm_iflush_buffer.3.rst
    MPI_Comm_join.3.rst
    MPI_Comm_rank.3.rst
    MPI_Comm_remote_group.3.rst
@@ -85,6 +98,7 @@ MPI API manual pages (section 3)
    MPI_Comm_split.3.rst
    MPI_Comm_split_type.3.rst
    MPI_Comm_test_inter.3.rst
+   MPI_Comm_toint.3.rst
    MPI_Compare_and_swap.3.rst
    MPI_Dims_create.3.rst
    MPI_Dist_graph_create.3.rst
@@ -95,13 +109,16 @@ MPI API manual pages (section 3)
    MPI_Errhandler_create.3.rst
    MPI_Errhandler_f2c.3.rst
    MPI_Errhandler_free.3.rst
+   MPI_Errhandler_fromint.3.rst
    MPI_Errhandler_get.3.rst
    MPI_Errhandler_set.3.rst
+   MPI_Errhandler_toint.3.rst
    MPI_Errors.3.rst
    MPI_Error_class.3.rst
    MPI_Error_string.3.rst
    MPI_Exscan.3.rst
    MPI_Exscan_init.3.rst
+   MPI_F_sync_reg.3.rst
    MPI_Fetch_and_op.3.rst
    MPI_File_c2f.3.rst
    MPI_File_call_errhandler.3.rst
@@ -109,6 +126,7 @@ MPI API manual pages (section 3)
    MPI_File_create_errhandler.3.rst
    MPI_File_delete.3.rst
    MPI_File_f2c.3.rst
+   MPI_File_fromint.3.rst
    MPI_File_get_amode.3.rst
    MPI_File_get_atomicity.3.rst
    MPI_File_get_byte_offset.3.rst
@@ -152,6 +170,7 @@ MPI API manual pages (section 3)
    MPI_File_set_size.3.rst
    MPI_File_set_view.3.rst
    MPI_File_sync.3.rst
+   MPI_File_toint.3.rst
    MPI_File_write.3.rst
    MPI_File_write_all.3.rst
    MPI_File_write_all_begin.3.rst
@@ -177,6 +196,7 @@ MPI API manual pages (section 3)
    MPI_Get_count.3.rst
    MPI_Get_elements.3.rst
    MPI_Get_elements_x.3.rst
+   MPI_Get_hw_resource_info.3.rst
    MPI_Get_library_version.3.rst
    MPI_Get_processor_name.3.rst
    MPI_Get_version.3.rst
@@ -194,6 +214,7 @@ MPI API manual pages (section 3)
    MPI_Group_excl.3.rst
    MPI_Group_f2c.3.rst
    MPI_Group_free.3.rst
+   MPI_Group_fromint.3.rst
    MPI_Group_from_session_pset.3.rst
    MPI_Group_incl.3.rst
    MPI_Group_intersection.3.rst
@@ -201,6 +222,7 @@ MPI API manual pages (section 3)
    MPI_Group_range_incl.3.rst
    MPI_Group_rank.3.rst
    MPI_Group_size.3.rst
+   MPI_Group_toint.3.rst
    MPI_Group_translate_ranks.3.rst
    MPI_Group_union.3.rst
    MPI_Iallgather.3.rst
@@ -230,12 +252,14 @@ MPI API manual pages (section 3)
    MPI_Info_env.3.rst
    MPI_Info_f2c.3.rst
    MPI_Info_free.3.rst
+   MPI_Info_fromint.3.rst
    MPI_Info_get.3.rst
    MPI_Info_get_nkeys.3.rst
    MPI_Info_get_nthkey.3.rst
    MPI_Info_get_string.3.rst
    MPI_Info_get_valuelen.3.rst
    MPI_Info_set.3.rst
+   MPI_Info_toint.3.rst
    MPI_Init.3.rst
    MPI_Init_thread.3.rst
    MPI_Initialized.3.rst
@@ -261,6 +285,8 @@ MPI API manual pages (section 3)
    MPI_Lookup_name.3.rst
    MPI_Message_c2f.3.rst
    MPI_Message_f2c.3.rst
+   MPI_Message_fromint.3.rst
+   MPI_Message_toint.3.rst
    MPI_Mprobe.3.rst
    MPI_Mrecv.3.rst
    MPI_Neighbor_allgather.3.rst
@@ -278,6 +304,8 @@ MPI API manual pages (section 3)
    MPI_Op_create.3.rst
    MPI_Op_f2c.3.rst
    MPI_Op_free.3.rst
+   MPI_Op_fromint.3.rst
+   MPI_Op_toint.3.rst
    MPI_Open_port.3.rst
    MPI_Pack.3.rst
    MPI_Pack_external.3.rst
@@ -305,10 +333,18 @@ MPI API manual pages (section 3)
    MPI_Reduce_scatter_block_init.3.rst
    MPI_Reduce_scatter_init.3.rst
    MPI_Register_datarep.3.rst
+   MPI_Remove_error_class.3.rst
+   MPI_Remove_error_code.3.rst
+   MPI_Remove_error_string.3.rst
    MPI_Request_c2f.3.rst
    MPI_Request_f2c.3.rst
    MPI_Request_free.3.rst
+   MPI_Request_fromint.3.rst
    MPI_Request_get_status.3.rst
+   MPI_Request_get_status_all.3.rst
+   MPI_Request_get_status_any.3.rst
+   MPI_Request_get_status_some.3.rst
+   MPI_Request_toint.3.rst
    MPI_Rget.3.rst
    MPI_Rget_accumulate.3.rst
    MPI_Rput.3.rst
@@ -324,18 +360,24 @@ MPI API manual pages (section 3)
    MPI_Send_init.3.rst
    MPI_Sendrecv.3.rst
    MPI_Sendrecv_replace.3.rst
+   MPI_Session_attach_buffer.3.rst
    MPI_Session_c2f.3.rst
    MPI_Session_call_errhandler.3.rst
    MPI_Session_create_errhandler.3.rst
+   MPI_Session_detach_buffer.3.rst
    MPI_Session_f2c.3.rst
    MPI_Session_finalize.3.rst
+   MPI_Session_flush_buffer.3.rst
+   MPI_Session_fromint.3.rst
    MPI_Session_get_errhandler.3.rst
    MPI_Session_get_info.3.rst
    MPI_Session_get_nth_pset.3.rst
    MPI_Session_get_num_psets.3.rst
    MPI_Session_get_pset_info.3.rst
+   MPI_Session_iflush_buffer.3.rst
    MPI_Session_init.3.rst
    MPI_Session_set_errhandler.3.rst
+   MPI_Session_toint.3.rst
    MPI_Sizeof.3.rst
    MPI_Ssend.3.rst
    MPI_Ssend_init.3.rst
@@ -357,14 +399,17 @@ MPI API manual pages (section 3)
    MPI_Status_set_source.3.rst
    MPI_Status_set_tag.3.rst
    MPI_T.3.rst
+   MPI_T_Events.3.rst
    MPI_T_category_changed.3.rst
    MPI_T_category_get_categories.3.rst
    MPI_T_category_get_cvars.3.rst
    MPI_T_category_get_events.3.rst
+   MPI_T_category_get_index.3.rst
    MPI_T_category_get_info.3.rst
    MPI_T_category_get_num.3.rst
    MPI_T_category_get_num_events.3.rst
    MPI_T_category_get_pvars.3.rst
+   MPI_T_cvar_get_index.3.rst
    MPI_T_cvar_get_info.3.rst
    MPI_T_cvar_get_num.3.rst
    MPI_T_cvar_handle_alloc.3.rst
@@ -390,6 +435,7 @@ MPI API manual pages (section 3)
    MPI_T_event_set_dropped_handler.3.rst
    MPI_T_finalize.3.rst
    MPI_T_init_thread.3.rst
+   MPI_T_pvar_get_index.3.rst
    MPI_T_pvar_get_info.3.rst
    MPI_T_pvar_get_num.3.rst
    MPI_T_pvar_handle_alloc.3.rst
@@ -432,6 +478,7 @@ MPI API manual pages (section 3)
    MPI_Type_f2c.3.rst
    MPI_Type_free.3.rst
    MPI_Type_free_keyval.3.rst
+   MPI_Type_fromint.3.rst
    MPI_Type_get_attr.3.rst
    MPI_Type_get_contents.3.rst
    MPI_Type_get_envelope.3.rst
@@ -440,6 +487,7 @@ MPI API manual pages (section 3)
    MPI_Type_get_name.3.rst
    MPI_Type_get_true_extent.3.rst
    MPI_Type_get_true_extent_x.3.rst
+   MPI_Type_get_value_index.3.rst
    MPI_Type_hindexed.3.rst
    MPI_Type_hvector.3.rst
    MPI_Type_indexed.3.rst
@@ -450,6 +498,7 @@ MPI API manual pages (section 3)
    MPI_Type_size.3.rst
    MPI_Type_size_x.3.rst
    MPI_Type_struct.3.rst
+   MPI_Type_toint.3.rst
    MPI_Type_ub.3.rst
    MPI_Type_vector.3.rst
    MPI_Unpack.3.rst
@@ -479,6 +528,7 @@ MPI API manual pages (section 3)
    MPI_Win_flush_local_all.3.rst
    MPI_Win_free.3.rst
    MPI_Win_free_keyval.3.rst
+   MPI_Win_fromint.3.rst
    MPI_Win_get_attr.3.rst
    MPI_Win_get_errhandler.3.rst
    MPI_Win_get_group.3.rst
@@ -495,6 +545,7 @@ MPI API manual pages (section 3)
    MPI_Win_start.3.rst
    MPI_Win_sync.3.rst
    MPI_Win_test.3.rst
+   MPI_Win_toint.3.rst
    MPI_Win_unlock.3.rst
    MPI_Win_unlock_all.3.rst
    MPI_Win_wait.3.rst

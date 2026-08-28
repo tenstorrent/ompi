@@ -17,7 +17,7 @@
  * Copyright (c) 2015-2017 Research Organization for Information Science
  *                         and Technology (RIST). All rights reserved.
  * Copyright (c) 2016-2017 IBM Corporation. All rights reserved.
- * Copyright (c) 2018-2019 Triad National Security, LLC. All rights
+ * Copyright (c) 2018-2026 Triad National Security, LLC. All rights
  *                         reserved.
  * Copyright (c) 2024      Advanced Micro Devices, Inc. All rights reserved.
  * $COPYRIGHT$
@@ -42,6 +42,7 @@
 #include "ompi/info/info_memkind.h"
 #include "ompi/mca/osc/base/base.h"
 #include "ompi/mca/osc/osc.h"
+#include "ompi/runtime/ompi_mpit_events.h"
 
 #include "ompi/runtime/params.h"
 
@@ -129,7 +130,7 @@ int ompi_win_init (void)
     ompi_mpi_win_null.win.w_flags = OMPI_WIN_INVALID;
     ompi_mpi_win_null.win.w_group = &ompi_mpi_group_null.group;
     OBJ_RETAIN(&ompi_mpi_group_null);
-    ompi_win_set_name(&ompi_mpi_win_null.win, "MPI_WIN_NULL");
+    ompi_mpi_win_null.win.w_name = strdup ("MPI_WIN_NULL");
     opal_pointer_array_set_item(&ompi_mpi_windows, 0, &ompi_mpi_win_null.win);
 
     ret = mca_base_var_enum_create ("accumulate_ops", accumulate_ops_values, &ompi_win_accumulate_ops);
@@ -206,7 +207,7 @@ static int alloc_window(struct ompi_communicator_t *comm, opal_info_t *info, int
 }
 
 static int
-config_window(void *base, size_t size, int disp_unit,
+config_window(void *base, size_t size, ptrdiff_t disp_unit,
               int flavor, int model, ompi_win_t *win)
 {
     int ret;
@@ -220,9 +221,15 @@ config_window(void *base, size_t size, int disp_unit,
                              MPI_WIN_SIZE, size, true);
     if (OMPI_SUCCESS != ret) return ret;
 
+    /* 
+     * No this isn't really right but the MPI Forum RMA WG was spleeping during
+     * Big count proposal reading and didn't put in something for Table 12.1 of the 
+     * MPI 5.0 standard for embiggened disp_unit, so here we go with int * in accordance
+     * with that table.
+     */
     ret = ompi_attr_set_int(WIN_ATTR, win,
                             &win->w_keyhash,
-                            MPI_WIN_DISP_UNIT, disp_unit,
+                            MPI_WIN_DISP_UNIT, (int)disp_unit,
                             true);
     if (OMPI_SUCCESS != ret) return ret;
 
@@ -239,12 +246,37 @@ config_window(void *base, size_t size, int disp_unit,
     win->w_f_to_c_index = opal_pointer_array_add(&ompi_mpi_windows, win);
     if (-1 == win->w_f_to_c_index) return OMPI_ERR_OUT_OF_RESOURCE;
 
+    /* Raise the MPI_T window-created event (no-op when no tool is listening or
+       the producer is disabled).  Covers all window flavors, since every
+       flavor's creation path funnels through config_window. */
+    if (NULL != ompi_event_win_created) {
+        struct {
+            int64_t  size;
+            int32_t  disp_unit;
+            int32_t  flavor;
+            uint64_t handle;
+        } payload;
+        payload.size = (int64_t) size;
+        payload.disp_unit = (int32_t) disp_unit;
+        payload.flavor = (int32_t) flavor;
+        /* XXX ABI: the MPI_Win handle value must match the registering MPI_T
+           tool's ABI (ompi_mpit_callback_abi). */
+        if (OMPI_MPIT_ABI_OMPI == ompi_mpit_callback_abi) {
+            payload.handle = (uint64_t) (uintptr_t) win;
+        } else {
+            /* TODO ABI (#13280): set the MPI Standard ABI handle value for the
+               window win. */
+            payload.handle = 0;
+        }
+        mca_base_event_raise(ompi_event_win_created, NULL, &payload);
+    }
+
     return OMPI_SUCCESS;
 }
 
 int
 ompi_win_create(void *base, size_t size,
-                int disp_unit, ompi_communicator_t *comm,
+                ptrdiff_t disp_unit, ompi_communicator_t *comm,
                 opal_info_t *info,
                 ompi_win_t** newwin)
 {
@@ -275,7 +307,7 @@ ompi_win_create(void *base, size_t size,
 }
 
 int
-ompi_win_allocate(size_t size, int disp_unit, opal_info_t *info,
+ompi_win_allocate(size_t size, ptrdiff_t disp_unit, opal_info_t *info,
                   ompi_communicator_t *comm, void *baseptr, ompi_win_t **newwin)
 {
     ompi_win_t *win;
@@ -307,7 +339,7 @@ ompi_win_allocate(size_t size, int disp_unit, opal_info_t *info,
 }
 
 int
-ompi_win_allocate_shared(size_t size, int disp_unit, opal_info_t *info,
+ompi_win_allocate_shared(size_t size, ptrdiff_t disp_unit, opal_info_t *info,
                          ompi_communicator_t *comm, void *baseptr, ompi_win_t **newwin)
 {
     ompi_win_t *win;
@@ -383,6 +415,30 @@ ompi_win_free(ompi_win_t *win)
     }
 
     if (OMPI_SUCCESS == ret) {
+        /* Raise the MPI_T window-freed event now that teardown has succeeded,
+           while the window object is still valid (raising here, not at entry,
+           keeps the freed event off the osc_free() failure path, so it pairs
+           with the created event).  No-op when no tool is listening or the
+           producer is disabled. */
+        if (NULL != ompi_event_win_freed) {
+            struct {
+                int32_t  flavor;
+                uint32_t pad;
+                uint64_t handle;
+            } payload;
+            payload.flavor = (int32_t) win->w_flavor;
+            payload.pad = 0;
+            /* XXX ABI: the MPI_Win handle value must match the registering MPI_T
+               tool's ABI (ompi_mpit_callback_abi). */
+            if (OMPI_MPIT_ABI_OMPI == ompi_mpit_callback_abi) {
+                payload.handle = (uint64_t) (uintptr_t) win;
+            } else {
+                /* TODO ABI (#13280): set the MPI Standard ABI handle value for
+                   the window win. */
+                payload.handle = 0;
+            }
+            mca_base_event_raise(ompi_event_win_freed, NULL, &payload);
+        }
         OBJ_RELEASE(win);
     }
 
@@ -394,7 +450,21 @@ int
 ompi_win_set_name(ompi_win_t *win, const char *win_name)
 {
     OPAL_THREAD_LOCK(&(win->w_lock));
-    opal_string_copy(win->w_name, win_name, MPI_MAX_OBJECT_NAME);
+
+    /* Defer allocation of the storage for the window name until it is
+       actually needed (i.e. the first time a name is set). */
+    if (NULL == win->w_name) {
+        win->w_name = (char *) malloc (OMPI_MPI_MAX_OBJECT_NAME_ABI);
+        if (NULL == win->w_name) {
+            OPAL_THREAD_UNLOCK(&(win->w_lock));
+            return OMPI_ERR_OUT_OF_RESOURCE;
+        }
+    }
+
+    /* Bound the store by the full internal buffer size (the ABI maximum); the
+     * per-entry-point limit (OPAL_MAX_OBJECT_NAME for the OMPI bindings, the
+     * ABI maximum for the standard-ABI bindings) is applied by the caller. */
+    opal_string_copy(win->w_name, win_name, OMPI_MPI_MAX_OBJECT_NAME_ABI);
     OPAL_THREAD_UNLOCK(&(win->w_lock));
 
     return OMPI_SUCCESS;
@@ -405,8 +475,15 @@ int
 ompi_win_get_name(ompi_win_t *win, char *win_name, int *length)
 {
     OPAL_THREAD_LOCK(&(win->w_lock));
-    opal_string_copy(win_name, win->w_name, MPI_MAX_OBJECT_NAME);
-    *length = (int)strlen(win->w_name);
+
+    /* If no name has ever been set on this window, its name is the empty
+       string (per the MPI standard).  w_name can hold up to the (larger)
+       MPI Forum ABI maximum, so the copy below may truncate; report the
+       length of what was actually returned, per MPI's requirement on
+       resultlen. */
+    const char *name = (NULL == win->w_name) ? "" : win->w_name;
+    opal_string_copy(win_name, name, MPI_MAX_OBJECT_NAME);
+    *length = (int)strlen(win_name);
     OPAL_THREAD_UNLOCK(&(win->w_lock));
 
     return OMPI_SUCCESS;
@@ -426,7 +503,7 @@ static void
 ompi_win_construct(ompi_win_t *win)
 {
     OBJ_CONSTRUCT(&win->w_lock, opal_mutex_t);
-    win->w_name[0] = '\0';
+    win->w_name = NULL;
     win->w_group = NULL;
     win->w_keyhash = NULL;
     win->w_f_to_c_index = 0;
@@ -456,6 +533,11 @@ ompi_win_destruct(ompi_win_t *win)
 
     if (NULL != win->w_group) {
         OBJ_RELEASE(win->w_group);
+    }
+
+    if (NULL != win->w_name) {
+        free (win->w_name);
+        win->w_name = NULL;
     }
 
     OBJ_DESTRUCT(&win->w_lock);

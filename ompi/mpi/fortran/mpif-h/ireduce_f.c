@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_IREDUCE = ompi_ireduce_f
 #pragma weak pmpi_ireduce = ompi_ireduce_f
 #pragma weak pmpi_ireduce_ = ompi_ireduce_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IREDUCE,
                             pmpi_ireduce,
                             pmpi_ireduce_,
                             pmpi_ireduce__,
-                            pompi_ireduce_f,
+                            ompi_ireduce_f,
                             (char *sendbuf, char *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, recvbuf, count, datatype, op, root, comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_IREDUCE = ompi_ireduce_f
 #pragma weak mpi_ireduce = ompi_ireduce_f
 #pragma weak mpi_ireduce_ = ompi_ireduce_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IREDUCE,
 #pragma weak MPI_Ireduce_f = ompi_ireduce_f
 #pragma weak MPI_Ireduce_f08 = ompi_ireduce_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_IREDUCE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_IREDUCE,
                             mpi_ireduce,
                             mpi_ireduce_,
                             mpi_ireduce__,
                             ompi_ireduce_f,
                             (char *sendbuf, char *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, recvbuf, count, datatype, op, root, comm, request, ierr) )
-#else
-#define ompi_ireduce_f pompi_ireduce_f
-#endif
 #endif
 
 

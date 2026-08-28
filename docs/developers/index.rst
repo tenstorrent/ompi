@@ -19,7 +19,9 @@ probably don't need to read this section.
    terminology
    source-code
    frameworks
+   mpi-t-event-producers
    gnu-autotools
    sphinx
    rst-for-markdown-expats.rst
    bindings
+   llm-friendly-docs

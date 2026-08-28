@@ -15,7 +15,7 @@
 # Copyright (c) 2006-2017 Los Alamos National Security, LLC.  All rights
 #                         reserved.
 # Copyright (c) 2009      Oak Ridge National Labs.  All rights reserved.
-# Copyright (c) 2011-2013 NVIDIA Corporation.  All rights reserved.
+# Copyright (c) 2011-2026 NVIDIA Corporation.  All rights reserved.
 # Copyright (c) 2012      Oracle and/or its affiliates.  All rights reserved.
 # Copyright (c) 2013      Mellanox Technologies, Inc.
 #                         All rights reserved.
@@ -28,7 +28,7 @@
 # Copyright (c) 2018      FUJITSU LIMITED.  All rights reserved.
 # Copyright (c) 2019      Triad National Security, LLC. All rights
 #                         reserved.
-# Copyright (c) 2023      Jeffrey M. Squyres.  All rights reserved.
+# Copyright (c) 2023-2026 Jeffrey M. Squyres.  All rights reserved.
 # Copyright (c) 2025      Nanook Consulting  All rights reserved.
 # $COPYRIGHT$
 #
@@ -66,11 +66,6 @@ OAC_PUSH_PREFIX([OPAL])
 
 OPAL_CAPTURE_CONFIGURE_CLI([OPAL_CONFIGURE_CLI])
 
-#
-# Init automake
-#
-AM_INIT_AUTOMAKE([foreign dist-bzip2 subdir-objects no-define 1.13.4 tar-pax])
-
 # Get our platform support file.  This has to be done very, very early
 # because it twiddles random bits of autoconf
 OPAL_LOAD_PLATFORM
@@ -85,6 +80,23 @@ OPAL_MAKEDIST_DISABLE=""
 . $srcdir/VERSION
 OPAL_CONFIGURE_SETUP
 opal_show_title "Configuring project_name_long"
+
+opal_show_subtitle "Startup tests"
+
+# These have to be invoked before AM INIT_AUTOMAKE
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
+AC_DEFINE_UNQUOTED(OPAL_ARCH, "$target", [OMPI architecture string])
+AS_IF([test "$host" != "$target"],
+      [AC_MSG_WARN([Cross-compile detected])
+       AC_MSG_WARN([Cross-compiling is only partially supported])
+       AC_MSG_WARN([Proceed at your own risk!])])
+
+#
+# Init automake
+#
+AM_INIT_AUTOMAKE([foreign dist-bzip2 subdir-objects no-define 1.13.4 tar-pax])
+
 opal_show_subtitle "Prerequisites"
 
 OMPI_TOP_BUILDDIR="`pwd`"
@@ -105,20 +117,6 @@ AS_IF([test "X$PERL" = "Xno"],
 AM_PATH_PYTHON([$python_min_version], [],
                [AC_MSG_ERROR([Open MPI requires Python >= v$python_min_version to build. Aborting.])])
 
-#
-# Setup some things that must be done before AM-INIT-AUTOMAKE
-#
-
-opal_show_subtitle "Startup tests"
-AC_CANONICAL_HOST
-AC_CANONICAL_TARGET
-AC_DEFINE_UNQUOTED(OPAL_ARCH, "$target", [OMPI architecture string])
-AS_IF([test "$host" != "$target"],
-      [AC_MSG_WARN([Cross-compile detected])
-       AC_MSG_WARN([Cross-compiling is only partially supported])
-       AC_MSG_WARN([Proceed at your own risk!])])
-
-
 # SILENT_RULES is new in AM 1.11, but we require 1.11 or higher via
 # autogen.  Limited testing shows that calling SILENT_RULES directly
 # works in more cases than adding "silent-rules" to INIT_AUTOMAKE
@@ -127,25 +125,6 @@ AM_SILENT_RULES([yes])
 
 # Make configure depend on the VERSION file, since it's used in AC_INIT
 AC_SUBST([CONFIGURE_DEPENDENCIES], ['$(top_srcdir)/VERSION'])
-
-# Sanity checks
-AC_DEFUN([OMPI_CHECK_DIR_FOR_SPACES],[
-    dir="$1"
-    article="$2"
-    label="$3"
-
-    AC_MSG_CHECKING([directory of $label])
-    AC_MSG_RESULT([$dir])
-    AS_IF([test -n "`echo $dir | grep ' '`"],
-          [AC_MSG_WARN([This version of Open MPI does not support $article $label])
-           AC_MSG_WARN([with a path that contains spaces])
-           AC_MSG_ERROR([Cannot continue.])])
-])
-
-ompi_dir=`pwd`
-OMPI_CHECK_DIR_FOR_SPACES([$ompi_dir], [a], [build tree])
-OMPI_CHECK_DIR_FOR_SPACES([$srcdir], [a], [source tree])
-OMPI_CHECK_DIR_FOR_SPACES([$prefix], [a], [prefix])
 
 opal_show_subtitle "Checking versions"
 
@@ -168,11 +147,12 @@ OPAL_SAVE_VERSION([OPAL], [Open Portable Access Layer], [$srcdir/VERSION],
 
 m4_ifdef([project_ompi],
          [AC_SUBST(libmpi_so_version)
+          AC_SUBST(libmpi_abi_so_version)
+          AC_SUBST(libopen_mpi_so_version)
           AC_SUBST(libmpi_mpifh_so_version)
           AC_SUBST(libmpi_usempi_tkr_so_version)
           AC_SUBST(libmpi_usempi_ignore_tkr_so_version)
           AC_SUBST(libmpi_usempif08_so_version)
-          AC_SUBST(libmpi_java_so_version)
           AC_SUBST(libompitrace_so_version)])
 m4_ifdef([project_oshmem],
          [AC_SUBST(liboshmem_so_version)])
@@ -223,6 +203,25 @@ AC_MSG_NOTICE([srcdir: $OMPI_TOP_SRCDIR])
 if test "$OMPI_TOP_BUILDDIR" != "$OMPI_TOP_SRCDIR"; then
     AC_MSG_NOTICE([Detected VPATH build])
 fi
+
+# Sanity checks
+AC_DEFUN([OMPI_CHECK_DIR_FOR_SPACES],[
+    dir="$1"
+    article="$2"
+    label="$3"
+
+    AC_MSG_CHECKING([directory of $label])
+    AC_MSG_RESULT([$dir])
+    AS_IF([test -n "`echo $dir | grep ' '`"],
+          [AC_MSG_WARN([This version of Open MPI does not support $article $label])
+           AC_MSG_WARN([with a path that contains spaces])
+           AC_MSG_ERROR([Cannot continue.])])
+])
+
+ompi_dir=`pwd`
+OMPI_CHECK_DIR_FOR_SPACES([$ompi_dir], [a], [build tree])
+OMPI_CHECK_DIR_FOR_SPACES([$srcdir], [a], [source tree])
+OMPI_CHECK_DIR_FOR_SPACES([$prefix], [a], [prefix])
 
 # Check for deprecated/deleted options
 OMPI_CHECK_DELETED_OPTIONS
@@ -278,6 +277,7 @@ m4_ifdef([project_oshmem],
 ############################################################################
 # Configuration options
 ############################################################################
+OMPI_HAVE_ACCELERATOR_SUPPORT=0
 
 OPAL_CONFIGURE_OPTIONS
 
@@ -417,6 +417,7 @@ AC_CHECK_TYPES(__int128)
 AC_CHECK_TYPES(uint128_t)
 AC_CHECK_TYPES(long long)
 
+AC_CHECK_TYPES(_Float128)
 AC_CHECK_TYPES(__float128)
 AC_CHECK_TYPES(short float)
 AC_CHECK_TYPES(long double)
@@ -427,6 +428,8 @@ AC_CHECK_TYPES(short float _Complex)
 AC_CHECK_TYPES(float _Complex)
 AC_CHECK_TYPES(double _Complex)
 AC_CHECK_TYPES(long double _Complex)
+AC_CHECK_TYPES(_Float128 _Complex)
+AC_CHECK_TYPES(__float128 _Complex)
 
 AC_CHECK_TYPES(intptr_t)
 AC_CHECK_TYPES(uintptr_t)
@@ -452,6 +455,9 @@ fi
 AC_CHECK_SIZEOF(float)
 AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(long double)
+if test "$ac_cv_type__Float128" = yes; then
+    AC_CHECK_SIZEOF(_Float128)
+fi
 if test "$ac_cv_type___float128" = yes; then
     AC_CHECK_SIZEOF(__float128)
 fi
@@ -463,6 +469,12 @@ fi
 AC_CHECK_SIZEOF(float _Complex)
 AC_CHECK_SIZEOF(double _Complex)
 AC_CHECK_SIZEOF(long double _Complex)
+if test "$ac_cv_type__Float128__Complex" = yes; then
+    AC_CHECK_SIZEOF(_Float128 _Complex)
+fi
+if test "$ac_cv_type___float128__Complex" = yes; then
+    AC_CHECK_SIZEOF(__float128 _Complex)
+fi
 
 AC_CHECK_SIZEOF(void *)
 AS_IF([test "$ac_cv_sizeof_void_p" -eq 4],
@@ -512,6 +524,9 @@ fi
 OPAL_C_GET_ALIGNMENT(float, OPAL_ALIGNMENT_FLOAT)
 OPAL_C_GET_ALIGNMENT(double, OPAL_ALIGNMENT_DOUBLE)
 OPAL_C_GET_ALIGNMENT(long double, OPAL_ALIGNMENT_LONG_DOUBLE)
+if test "$ac_cv_type__Float128" = yes; then
+    OPAL_C_GET_ALIGNMENT(_Float128, OPAL_ALIGNMENT__FLOAT128)
+fi
 if test "$ac_cv_type___float128" = yes; then
     OPAL_C_GET_ALIGNMENT(__float128, OPAL_ALIGNMENT___FLOAT128)
 fi
@@ -525,6 +540,12 @@ fi
 OPAL_C_GET_ALIGNMENT(float _Complex, OPAL_ALIGNMENT_FLOAT_COMPLEX)
 OPAL_C_GET_ALIGNMENT(double _Complex, OPAL_ALIGNMENT_DOUBLE_COMPLEX)
 OPAL_C_GET_ALIGNMENT(long double _Complex, OPAL_ALIGNMENT_LONG_DOUBLE_COMPLEX)
+if test "$ac_cv_type__Float128__Complex" = yes; then
+    OPAL_C_GET_ALIGNMENT(_Float128 _Complex, OPAL_ALIGNMENT__FLOAT128_COMPLEX)
+fi
+if test "$ac_cv_type___float128__Complex" = yes; then
+    OPAL_C_GET_ALIGNMENT(__float128 _Complex, OPAL_ALIGNMENT___FLOAT128_COMPLEX)
+fi
 
 OPAL_C_GET_ALIGNMENT(void *, OPAL_ALIGNMENT_VOID_P)
 OPAL_C_GET_ALIGNMENT(size_t, OPAL_ALIGNMENT_SIZE_T)
@@ -535,49 +556,38 @@ OPAL_C_GET_ALIGNMENT(size_t, OPAL_ALIGNMENT_SIZE_T)
 
 OPAL_CHECK_ALT_SHORT_FLOAT
 
-# Check system alignment requirements
-if test "$opal_want_heterogeneous" = 1; then
-    ompi_cv_c_word_size_align=yes
-else
-    AC_CACHE_CHECK([if word-sized integers must be word-size aligned],
-        [ompi_cv_c_word_size_align],
-        [AC_LANG_PUSH(C)
-         AC_RUN_IFELSE([AC_LANG_PROGRAM([dnl
-#include <stdlib.h>], [[    long data[2] = {0, 0};
-    long *lp;
-    int *ip;
-    ip = (int*) data;
-    ip++;
-    lp = (long*) ip;
-    return lp[0]; ]])],
-            [ompi_cv_c_word_size_align=no],
-            [ompi_cv_c_word_size_align=yes],
-            [ompi_cv_c_word_size_align=yes])])
-fi
-AS_IF([test $ompi_cv_c_word_size_align = yes], [results=1], [results=0])
-AC_DEFINE_UNQUOTED([OPAL_ALIGN_WORD_SIZE_INTEGERS], [$results],
-    [set to 1 if word-size integers must be aligned to word-size padding to prevent bus errors])
-
 #
 # Check for other compiler characteristics
 #
 
+OPAL_C_WEAK_ALIASES
+OPAL_C_MACRO_WEAK_ALIASES
 OPAL_C_WEAK_SYMBOLS
-OPAL_C_MACRO_WEAK_SYMBOLS
 
-# If we want the profiling layer:
-# - If the C compiler has weak symbols, use those.
-# - If not, then set to compile the code again with #define's in a
-#   separate directory.
+# The profiling layer:
+#
+# - Where the C compiler has weak aliases, the public MPI_* symbol is a weak
+#   alias of the strong PMPI_* one.
+#
+# - Where it does not (notably Mach-O, which cannot express a weak alias at
+#   all), the public MPI_* symbol is a *weak definition* that forwards to the
+#   strong PMPI_* one.
+#
+# Either way the bindings are compiled exactly once.  Open MPI used to compile
+# them a second time, with #defines, purely to emit the MPI_* symbols on
+# platforms with no weak aliases; that is no longer necessary, and weak symbols
+# are now required.
 
-if test "$WANT_WEAK_SYMBOLS" = "0"; then
-    OPAL_C_HAVE_WEAK_SYMBOLS=0
+if test "$WANT_WEAK_ALIASES" = "0"; then
+    OPAL_C_HAVE_WEAK_ALIASES=0
 fi
-if test "$OPAL_C_HAVE_WEAK_SYMBOLS" = "1"; then
-    OMPI_PROFILING_COMPILE_SEPARATELY=0
-else
-    OMPI_PROFILING_COMPILE_SEPARATELY=1
-fi
+AS_IF([test "$OPAL_C_HAVE_WEAK_ALIASES" != "1" && \
+       test "$OPAL_C_HAVE_WEAK_SYMBOLS" != "1"],
+      [AC_MSG_ERROR([Open MPI requires a C compiler with support for weak
+symbols (__attribute__((weak))) or weak aliases; this compiler has neither.
+The MPI profiling interface cannot be built without one of them.])])
+
+OMPI_PROFILING_COMPILE_SEPARATELY=0
 
 # Check if we support the offsetof compiler directive
 
@@ -620,13 +630,6 @@ AS_IF([test "$opal_cv_compiler_FAMILYNAME" = "GNU" && \
        AC_MSG_WARN([a different compiler to build Open MPI.])
        AC_MSG_ERROR([Cannot continue])
       ])
-
-##################################
-# Java MPI Binding request
-##################################
-# Only needed for OMPI
-m4_ifdef([project_ompi], [OMPI_SETUP_JAVA_BINDINGS])
-
 
 ##################################
 # MPI / OpenSHMEM API profiling layer
@@ -892,12 +895,28 @@ AC_CHECK_MEMBERS([struct timespec.tv_nsec],
 #endif])
 
 #
+# Determine the type backing opal_count_t.  This runs unconditionally (OPAL
+# must build standalone) and is the single source of truth for the count type:
+# OMPI_FIND_MPI_AINT_COUNT_OFFSET (below) derives MPI_Count from the same
+# OPAL_COUNT_* values rather than recomputing them.
+#
+OPAL_FIND_COUNT_TYPE
+
+#
 # Find corresponding types for MPI_Aint, MPI_Count, and MPI_Offset.
 # And if relevant, find the corresponding MPI_ADDRESS_KIND,
 # MPI_COUNT_KIND, and MPI_OFFSET_KIND.
 #
 m4_ifdef([project_ompi], [OMPI_FIND_MPI_AINT_COUNT_OFFSET])
 
+#
+# now that we have MPI_COUNT_KIND set, try building
+# MPI F08 bindings if that level of fortran support is requested
+#
+m4_ifdef([project_ompi], [AS_IF([test $OMPI_BUILD_FORTRAN_BINDINGS -ge $OMPI_FORTRAN_USEMPIF08_BINDINGS],
+                                [OMPI_FORTRAN_CHECK_BIG_COUNT([],
+                                     [AC_MSG_ERROR([The mpi_f08 module cannot be compiled using the current set of Fortran compiler options ($FCFLAGS).  Either change compiler options or use --enable-mpi-fortran=usempi])])
+                                ])])
 # checkpoint results
 AC_CACHE_SAVE
 
@@ -1198,6 +1217,11 @@ AC_SUBST(OPAL_3RDPARTY_DISTCLEAN_DIRS)
 OPAL_SETUP_FT
 
 ##################################
+# MPI Forum values
+##################################
+OMPI_GET_FORUM_ABI_VALUES
+
+##################################
 # MCA
 ##################################
 
@@ -1358,6 +1382,57 @@ m4_ifdef([project_ompi],[CXXCPPFLAGS="$CXX_INCLUDES $CXXCPPFLAGS"])
 # versions without optimization for debugger modules).
 
 m4_ifdef([project_ompi], [OMPI_SETUP_DEBUGGER_FLAGS])
+
+############################################################################
+# Symbol re-export detection for libmpi backward compatibility
+############################################################################
+# Detect platform-specific linker support for re-exporting symbols from
+# libopen_mpi through libmpi to maintain v5.x binary compatibility.
+#
+# This is only needed on macOS, where the two-level namespace records
+# which library each symbol was found in at link time: a v5.x-built
+# binary looked up the predefined MPI handle symbols (e.g.,
+# ompi_mpi_comm_world) in libmpi, so libmpi must re-export them now
+# that they live in libopen_mpi.  On ELF platforms the global symbol
+# namespace is flat: libmpi's DT_NEEDED dependency on libopen_mpi is
+# sufficient for a v5.x binary's references to resolve at run time,
+# so no re-export mechanism is required at all.
+m4_ifdef([project_ompi], [
+    AC_MSG_CHECKING([for linker symbol re-export support])
+    ompi_reexport_method="none"
+
+    OPAL_VAR_SCOPE_PUSH([LDFLAGS_save])
+
+    # Save current LDFLAGS
+    LDFLAGS_save="$LDFLAGS"
+
+    case $host_os in
+    darwin* | rhapsody*)
+        # macOS: Test -reexport_library flag
+        LDFLAGS="$LDFLAGS_save -Wl,-reexport_library,/usr/lib/libSystem.dylib"
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
+                       [ompi_reexport_method=macos],
+                       [AC_MSG_WARN([macOS linker does not support -reexport flag])])
+        ;;
+    *)
+        ;;
+    esac
+
+    # Restore LDFLAGS
+    LDFLAGS="$LDFLAGS_save"
+    OPAL_VAR_SCOPE_POP
+
+    AC_MSG_RESULT([$ompi_reexport_method])
+
+    AM_CONDITIONAL([OMPI_REEXPORT_MACOS],
+                   [test "$ompi_reexport_method" = "macos"])
+])
+
+# libopen_mpi fails at link time.
+# See https://github.com/open-mpi/ompi/issues/2956
+# but the check does not seem to work on all architectures.
+m4_ifdef([project_ompi], [OMPI_SETUP_LAYERING_CHECKS])
+
 #
 # Delayed the substitution of CFLAGS and friends until now because
 # they may have been modified throughout the course of this script.
@@ -1523,8 +1598,6 @@ AC_CONFIG_FILES([
     test/threads/Makefile
     test/util/Makefile
 ])
-
-m4_ifdef([project_ompi], [AC_CONFIG_FILES([test/monitoring/Makefile test/spc/Makefile])])
 
 AC_CONFIG_FILES([contrib/dist/mofed/debian/rules],
                 [chmod +x contrib/dist/mofed/debian/rules])

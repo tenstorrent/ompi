@@ -28,7 +28,7 @@
 #include "ompi/mpi/fortran/base/fortran_base_strings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_PACK_EXTERNAL_SIZE = ompi_pack_external_size_f
 #pragma weak pmpi_pack_external_size = ompi_pack_external_size_f
 #pragma weak pmpi_pack_external_size_ = ompi_pack_external_size_f
@@ -41,13 +41,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_PACK_EXTERNAL_SIZE,
                            pmpi_pack_external_size,
                            pmpi_pack_external_size_,
                            pmpi_pack_external_size__,
-                           pompi_pack_external_size_f,
+                           ompi_pack_external_size_f,
                             (char *datarep, MPI_Fint *incount, MPI_Fint *datatype, MPI_Aint *size, MPI_Fint *ierr, int datarep_len),
                             (datarep, incount, datatype, size, ierr, datarep_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_PACK_EXTERNAL_SIZE = ompi_pack_external_size_f
 #pragma weak mpi_pack_external_size = ompi_pack_external_size_f
 #pragma weak mpi_pack_external_size_ = ompi_pack_external_size_f
@@ -56,17 +56,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_PACK_EXTERNAL_SIZE,
 #pragma weak MPI_Pack_external_size_f = ompi_pack_external_size_f
 #pragma weak MPI_Pack_external_size_f08 = ompi_pack_external_size_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_PACK_EXTERNAL_SIZE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_PACK_EXTERNAL_SIZE,
                            mpi_pack_external_size,
                            mpi_pack_external_size_,
                            mpi_pack_external_size__,
                            ompi_pack_external_size_f,
                             (char *datarep, MPI_Fint *incount, MPI_Fint *datatype, MPI_Aint *size, MPI_Fint *ierr, int datarep_len),
                             (datarep, incount, datatype, size, ierr, datarep_len) )
-#else
-#define ompi_pack_external_size_f pompi_pack_external_size_f
-#endif
 #endif
 
 

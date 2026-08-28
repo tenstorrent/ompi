@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_TYPE_CREATE_F90_INTEGER = ompi_type_create_f90_integer_f
 #pragma weak pmpi_type_create_f90_integer = ompi_type_create_f90_integer_f
 #pragma weak pmpi_type_create_f90_integer_ = ompi_type_create_f90_integer_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_TYPE_CREATE_F90_INTEGER,
                            pmpi_type_create_f90_integer,
                            pmpi_type_create_f90_integer_,
                            pmpi_type_create_f90_integer__,
-                           pompi_type_create_f90_integer_f,
+                           ompi_type_create_f90_integer_f,
                            (MPI_Fint *r, MPI_Fint *newtype, MPI_Fint *ierr),
                            (r, newtype, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_TYPE_CREATE_F90_INTEGER = ompi_type_create_f90_integer_f
 #pragma weak mpi_type_create_f90_integer = ompi_type_create_f90_integer_f
 #pragma weak mpi_type_create_f90_integer_ = ompi_type_create_f90_integer_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_TYPE_CREATE_F90_INTEGER,
 #pragma weak MPI_Type_create_f90_integer_f = ompi_type_create_f90_integer_f
 #pragma weak MPI_Type_create_f90_integer_f08 = ompi_type_create_f90_integer_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_TYPE_CREATE_F90_INTEGER,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_TYPE_CREATE_F90_INTEGER,
                            mpi_type_create_f90_integer,
                            mpi_type_create_f90_integer_,
                            mpi_type_create_f90_integer__,
                            ompi_type_create_f90_integer_f,
                            (MPI_Fint *r, MPI_Fint *newtype, MPI_Fint *ierr),
                            (r, newtype, ierr) )
-#else
-#define ompi_type_create_f90_integer_f pompi_type_create_f90_integer_f
-#endif
 #endif
 
 

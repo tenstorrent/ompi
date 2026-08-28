@@ -27,7 +27,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_WRITE = ompi_file_write_f
 #pragma weak pmpi_file_write = ompi_file_write_f
 #pragma weak pmpi_file_write_ = ompi_file_write_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_WRITE,
                            pmpi_file_write,
                            pmpi_file_write_,
                            pmpi_file_write__,
-                           pompi_file_write_f,
+                           ompi_file_write_f,
                            (MPI_Fint *fh, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *status, MPI_Fint *ierr),
                            (fh, buf, count, datatype, status, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_WRITE = ompi_file_write_f
 #pragma weak mpi_file_write = ompi_file_write_f
 #pragma weak mpi_file_write_ = ompi_file_write_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_WRITE,
 #pragma weak MPI_File_write_f = ompi_file_write_f
 #pragma weak MPI_File_write_f08 = ompi_file_write_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_WRITE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_WRITE,
                            mpi_file_write,
                            mpi_file_write_,
                            mpi_file_write__,
                            ompi_file_write_f,
                            (MPI_Fint *fh, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *status, MPI_Fint *ierr),
                            (fh, buf, count, datatype, status, ierr) )
-#else
-#define ompi_file_write_f pompi_file_write_f
-#endif
 #endif
 
 

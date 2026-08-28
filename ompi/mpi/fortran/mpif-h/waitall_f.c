@@ -27,7 +27,7 @@
 #include "ompi/communicator/communicator.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_WAITALL = ompi_waitall_f
 #pragma weak pmpi_waitall = ompi_waitall_f
 #pragma weak pmpi_waitall_ = ompi_waitall_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WAITALL,
                            pmpi_waitall,
                            pmpi_waitall_,
                            pmpi_waitall__,
-                           pompi_waitall_f,
+                           ompi_waitall_f,
                            (MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *array_of_statuses, MPI_Fint *ierr),
                            (count, array_of_requests, array_of_statuses, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_WAITALL = ompi_waitall_f
 #pragma weak mpi_waitall = ompi_waitall_f
 #pragma weak mpi_waitall_ = ompi_waitall_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WAITALL,
 #pragma weak MPI_Waitall_f = ompi_waitall_f
 #pragma weak MPI_Waitall_f08 = ompi_waitall_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_WAITALL,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_WAITALL,
                            mpi_waitall,
                            mpi_waitall_,
                            mpi_waitall__,
                            ompi_waitall_f,
                            (MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *array_of_statuses, MPI_Fint *ierr),
                            (count, array_of_requests, array_of_statuses, ierr) )
-#else
-#define ompi_waitall_f pompi_waitall_f
-#endif
 #endif
 
 

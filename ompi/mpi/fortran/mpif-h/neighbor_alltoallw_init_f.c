@@ -15,6 +15,8 @@
  *                         reserved.
  * Copyright (c) 2015-2021 Research Organization for Information Science
  *                         and Technology (RIST).  All rights reserved.
+ * Copyright (c) 2025-2026 Triad National Security, LLC. All rights
+ *                         reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -26,10 +28,11 @@
 
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 #include "ompi/mpi/fortran/base/constants.h"
+#include "ompi/mpi/fortran/base/fortran_base_topo_neighbors.h"
 #include "ompi/mca/coll/base/coll_base_util.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_NEIGHBOR_ALLTOALLW_INIT = ompi_neighbor_alltoallw_init_f
 #pragma weak pmpi_neighbor_alltoallw_init = ompi_neighbor_alltoallw_init_f
 #pragma weak pmpi_neighbor_alltoallw_init_ = ompi_neighbor_alltoallw_init_f
@@ -42,13 +45,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_NEIGHBOR_ALLTOALLW_INIT,
                             pmpi_neighbor_alltoallw_init,
                             pmpi_neighbor_alltoallw_init_,
                             pmpi_neighbor_alltoallw_init__,
-                            pompi_neighbor_alltoallw_init_f,
+                            ompi_neighbor_alltoallw_init_f,
                             (char *sendbuf, MPI_Fint *sendcounts, MPI_Aint *sdispls, MPI_Fint *sendtypes, char *recvbuf, MPI_Fint *recvcounts, MPI_Aint *rdispls, MPI_Fint *recvtypes, MPI_Fint *comm, MPI_Fint *info, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm, info, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_NEIGHBOR_ALLTOALLW_INIT = ompi_neighbor_alltoallw_init_f
 #pragma weak mpi_neighbor_alltoallw_init = ompi_neighbor_alltoallw_init_f
 #pragma weak mpi_neighbor_alltoallw_init_ = ompi_neighbor_alltoallw_init_f
@@ -57,17 +60,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_NEIGHBOR_ALLTOALLW_INIT,
 #pragma weak MPI_Neighbor_alltoallw_init_f = ompi_neighbor_alltoallw_init_f
 #pragma weak MPI_Neighbor_alltoallw_init_f08 = ompi_neighbor_alltoallw_init_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_NEIGHBOR_ALLTOALLW_INIT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_NEIGHBOR_ALLTOALLW_INIT,
                             mpi_neighbor_alltoallw_init,
                             mpi_neighbor_alltoallw_init_,
                             mpi_neighbor_alltoallw_init__,
                             ompi_neighbor_alltoallw_init_f,
                             (char *sendbuf, MPI_Fint *sendcounts, MPI_Aint *sdispls, MPI_Fint *sendtypes, char *recvbuf, MPI_Fint *recvcounts, MPI_Aint *rdispls, MPI_Fint *recvtypes, MPI_Fint *comm, MPI_Fint *info, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm, info, request, ierr) )
-#else
-#define ompi_neighbor_alltoallw_init_f pompi_neighbor_alltoallw_init_f
-#endif
 #endif
 
 
@@ -81,24 +80,33 @@ void ompi_neighbor_alltoallw_init_f(char *sendbuf, MPI_Fint *sendcounts,
     MPI_Datatype *c_sendtypes, *c_recvtypes;
     MPI_Info c_info;
     MPI_Request c_request;
-    int size, idx = 0, c_ierr;
+    int indegree, outdegree, c_ierr;
     OMPI_ARRAY_NAME_DECL(sendcounts);
     OMPI_ARRAY_NAME_DECL(recvcounts);
 
     c_comm = PMPI_Comm_f2c(*comm);
     c_info = PMPI_Info_f2c(*info);
-    PMPI_Comm_size(c_comm, &size);
 
-    c_sendtypes = (MPI_Datatype *) malloc(2* size * sizeof(MPI_Datatype));
-    c_recvtypes = c_sendtypes + size;
+    c_ierr = ompi_fortran_neighbor_count(c_comm, &indegree, &outdegree);
+    if (MPI_SUCCESS != c_ierr) {
+        if (NULL != ierr) *ierr = OMPI_INT_2_FINT(c_ierr);
+        return;
+    }
 
-    OMPI_ARRAY_FINT_2_INT(sendcounts, size);
-    OMPI_ARRAY_FINT_2_INT(recvcounts, size);
+    c_sendtypes = (MPI_Datatype *) malloc(outdegree * sizeof(MPI_Datatype));
+    c_recvtypes = (MPI_Datatype *) malloc(indegree * sizeof(MPI_Datatype));
 
-    while (size > 0) {
-        c_sendtypes[size - 1] = PMPI_Type_f2c(sendtypes[size - 1]);
-        c_recvtypes[size - 1] = PMPI_Type_f2c(recvtypes[size - 1]);
-        --size;
+    OMPI_ARRAY_FINT_2_INT(sendcounts, outdegree);
+    OMPI_ARRAY_FINT_2_INT(recvcounts, indegree);
+
+    while (outdegree > 0) {
+        c_sendtypes[outdegree - 1] = PMPI_Type_f2c(sendtypes[outdegree - 1]);
+        --outdegree;
+    }
+
+    while (indegree > 0) {
+        c_recvtypes[indegree - 1] = PMPI_Type_f2c(recvtypes[indegree - 1]);
+        --indegree;
     }
 
     /* Neighbor_alltoallw_init does not support MPI_IN_PLACE */
@@ -116,13 +124,12 @@ void ompi_neighbor_alltoallw_init_f(char *sendbuf, MPI_Fint *sendcounts,
     if (NULL != ierr) *ierr = OMPI_INT_2_FINT(c_ierr);
     if (MPI_SUCCESS == c_ierr) {
         *request = PMPI_Request_c2f(c_request);
-        ompi_coll_base_nbc_request_t* nb_request = (ompi_coll_base_nbc_request_t*)c_request;
-        nb_request->data.release_arrays[idx++] = c_sendtypes;
-        if (sendcounts != OMPI_ARRAY_NAME_CONVERT(sendcounts)) {
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(sendcounts);
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(recvcounts);
+        ompi_coll_base_append_array_to_release(c_request, c_sendtypes);
+        if ((void *)sendcounts != (void *)OMPI_ARRAY_NAME_CONVERT(sendcounts)) {
+            ompi_coll_base_append_array_to_release(c_request, OMPI_ARRAY_NAME_CONVERT(sendcounts));
+            ompi_coll_base_append_array_to_release(c_request, OMPI_ARRAY_NAME_CONVERT(recvcounts));
         }
-        nb_request->data.release_arrays[idx]   = NULL;
+        ompi_coll_base_add_release_arrays_cb(c_request);
     } else {
         OMPI_ARRAY_FINT_2_INT_CLEANUP(sendcounts);
         OMPI_ARRAY_FINT_2_INT_CLEANUP(recvcounts);

@@ -12,6 +12,8 @@
  * Copyright (c) 2011-2012 Cisco Systems, Inc.  All rights reserved.
  * Copyright (c) 2015-2019 Research Organization for Information Science
  *                         and Technology (RIST).  All rights reserved.
+ * Copyright (c) 2025      Triad National Security, LLC. All rights
+ *                         reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -27,7 +29,7 @@
 #include "ompi/mca/coll/base/coll_base_util.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_IALLTOALLW = ompi_ialltoallw_f
 #pragma weak pmpi_ialltoallw = ompi_ialltoallw_f
 #pragma weak pmpi_ialltoallw_ = ompi_ialltoallw_f
@@ -40,13 +42,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IALLTOALLW,
                             pmpi_ialltoallw,
                             pmpi_ialltoallw_,
                             pmpi_ialltoallw__,
-                            pompi_ialltoallw_f,
+                            ompi_ialltoallw_f,
                             (char *sendbuf, MPI_Fint *sendcounts, MPI_Fint *sdispls, MPI_Fint *sendtypes, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *rdispls, MPI_Fint *recvtypes, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_IALLTOALLW = ompi_ialltoallw_f
 #pragma weak mpi_ialltoallw = ompi_ialltoallw_f
 #pragma weak mpi_ialltoallw_ = ompi_ialltoallw_f
@@ -55,17 +57,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IALLTOALLW,
 #pragma weak MPI_Ialltoallw_f = ompi_ialltoallw_f
 #pragma weak MPI_Ialltoallw_f08 = ompi_ialltoallw_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_IALLTOALLW,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_IALLTOALLW,
                             mpi_ialltoallw,
                             mpi_ialltoallw_,
                             mpi_ialltoallw__,
                             ompi_ialltoallw_f,
                             (char *sendbuf, MPI_Fint *sendcounts, MPI_Fint *sdispls, MPI_Fint *sendtypes, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *rdispls, MPI_Fint *recvtypes, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm, request, ierr) )
-#else
-#define ompi_ialltoallw_f pompi_ialltoallw_f
-#endif
 #endif
 
 
@@ -78,7 +76,7 @@ void ompi_ialltoallw_f(char *sendbuf, MPI_Fint *sendcounts,
     MPI_Comm c_comm;
     MPI_Datatype *c_sendtypes = NULL, *c_recvtypes;
     MPI_Request c_request;
-    int size, idx = 0, c_ierr;
+    int size, c_ierr;
     OMPI_ARRAY_NAME_DECL(sendcounts);
     OMPI_ARRAY_NAME_DECL(sdispls);
     OMPI_ARRAY_NAME_DECL(recvcounts);
@@ -128,17 +126,16 @@ void ompi_ialltoallw_f(char *sendbuf, MPI_Fint *sendcounts,
         OMPI_ARRAY_FINT_2_INT_CLEANUP(recvcounts);
         OMPI_ARRAY_FINT_2_INT_CLEANUP(rdispls);
     } else {
-        ompi_coll_base_nbc_request_t* nb_request = (ompi_coll_base_nbc_request_t*)c_request;
-        if (sendcounts != OMPI_ARRAY_NAME_CONVERT(sendcounts)) {
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(sendcounts);
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(recvcounts);
+        if ((void *)sendcounts != (void *)OMPI_ARRAY_NAME_CONVERT(sendcounts)) {
+            ompi_coll_base_append_array_to_release(c_request, OMPI_ARRAY_NAME_CONVERT(sendcounts));
+            ompi_coll_base_append_array_to_release(c_request, OMPI_ARRAY_NAME_CONVERT(recvcounts));
         }
-        if (sdispls != OMPI_ARRAY_NAME_CONVERT(sdispls)) {
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(sdispls);
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(rdispls);
+        if ((void *)sdispls != (void *)OMPI_ARRAY_NAME_CONVERT(sdispls)) {
+            ompi_coll_base_append_array_to_release(c_request, OMPI_ARRAY_NAME_CONVERT(sdispls));
+            ompi_coll_base_append_array_to_release(c_request, OMPI_ARRAY_NAME_CONVERT(rdispls));
         }
-        nb_request->data.release_arrays[idx++] = c_recvtypes;
-        nb_request->data.release_arrays[idx++] = c_sendtypes;
-        nb_request->data.release_arrays[idx]   = NULL;
+        ompi_coll_base_append_array_to_release(c_request, c_recvtypes);
+        ompi_coll_base_append_array_to_release(c_request, c_sendtypes);
+        ompi_coll_base_add_release_arrays_cb(c_request);
     }
 }

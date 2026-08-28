@@ -14,7 +14,7 @@
  *                         reserved.
  * Copyright (c) 2018      Intel, Inc, All rights reserved
  *
- * Copyright (c) 2018      Amazon.com, Inc. or its affiliates.  All Rights reserved.
+ * Copyright (c) 2018-2025 Amazon.com, Inc. or its affiliates.  All Rights reserved.
  * Copyright (c) 2020      Google, LLC. All rights reserved.
  * Copyright (c) 2022-2024 Triad National Security, LLC. All rights
  *                         reserved.
@@ -46,7 +46,7 @@ static int mca_btl_ofi_add_procs(mca_btl_base_module_t *btl, size_t nprocs,
                                  opal_bitmap_t *reachable)
 {
     int rc;
-    int count;
+    int count = 0;
     char *ep_name = NULL;
     size_t namelen = mca_btl_ofi_component.namelen;
 
@@ -89,20 +89,43 @@ static int mca_btl_ofi_add_procs(mca_btl_base_module_t *btl, size_t nprocs,
             MCA_BTL_OFI_ABORT();
         }
 
-        /* get peer fi_addr */
-        count = fi_av_insert(ofi_btl->av,          /* Address vector to insert */
-                             ep_name,              /* peer name */
-                             1,                    /* amount to insert */
-                             &peers[i]->peer_addr, /* return peer address here */
-                             0,                    /* flags */
-                             NULL);                /* context */
+        /* The modex blob is packed as: uint32 nmodules, then per module:
+         * uint32 namelen, namelen bytes. Insert only this module's paired peer
+         * (by module_index) into the AV. */
+        {
+            uint8_t *p = (uint8_t *) ep_name;
+            uint32_t nm = 0;
+            memcpy(&nm, p, sizeof(uint32_t));
+            p += sizeof(uint32_t);
+
+            if (0 == nm) {
+                free(ep_name);
+                BTL_VERBOSE(("peer published 0 modules"));
+                MCA_BTL_OFI_ABORT();
+            }
+
+            int target = ofi_btl->module_index % (int) nm;
+            fi_addr_t peer_addr = FI_ADDR_NOTAVAIL;
+
+            for (int k = 0; k <= target && k < (int) nm; k++) {
+                uint32_t nl = 0;
+                memcpy(&nl, p, sizeof(uint32_t));
+                p += sizeof(uint32_t);
+                if (k == target) {
+                    count = fi_av_insert(ofi_btl->av, p, 1, &peer_addr, 0, NULL);
+                }
+                p += nl;
+            }
+            peers[i]->peer_addr = peer_addr;
+        }
+        free(ep_name);
 
         /* if succeed, add this proc and mark reachable */
-        if (count == 1) { /* we inserted 1 address. */
+        if (peers[i]->peer_addr != FI_ADDR_NOTAVAIL && count == 1) {
             opal_list_append(&ofi_btl->endpoints, &peers[i]->super);
             opal_bitmap_set_bit(reachable, i);
         } else {
-            BTL_VERBOSE(("fi_av_insert failed with rc = %d", count));
+            BTL_VERBOSE(("fi_av_insert failed for module %d", ofi_btl->module_index));
             MCA_BTL_OFI_ABORT();
         }
     }
@@ -143,13 +166,35 @@ static int mca_btl_ofi_del_procs(mca_btl_base_module_t *btl, size_t nprocs, opal
     return OPAL_SUCCESS;
 }
 
+static int mca_btl_ofi_register_error(mca_btl_base_module_t *btl,
+                                      mca_btl_base_module_error_cb_fn_t cb)
+{
+    mca_btl_ofi_module_t *ofi_btl = (mca_btl_ofi_module_t *) btl;
+    ofi_btl->ofi_error_cb = cb;
+    return OPAL_SUCCESS;
+}
+
 void mca_btl_ofi_rcache_init(mca_btl_ofi_module_t *module)
 {
     if (!module->initialized) {
         mca_rcache_base_resources_t rcache_resources;
         char *tmp;
+        int ret;
 
-        (void) opal_asprintf(&tmp, "ofi.%s", module->linux_device_name);
+        /* this must be called during single threaded part of the code and
+         * before Libfabric configures its memory monitors.  Easiest to do
+         * that before domain open.  Silently ignore not-supported errors,
+         * as they are not critical to program correctness, but only
+         * indicate that LIbfabric will have to pick a different, possibly
+         * less optimal, monitor. */
+        ret = opal_common_ofi_export_memory_monitor();
+        if (0 != ret && -FI_ENOSYS != ret) {
+            opal_output_verbose(1, opal_common_ofi.output,
+                                "Failed to inject Libfabric memory monitor: %s",
+                                fi_strerror(-ret));
+        }
+
+        (void) opal_asprintf(&tmp, "ofi.%s", module->domain_name);
 
         rcache_resources.cache_name = tmp;
         rcache_resources.reg_data = (void *) module;
@@ -196,10 +241,12 @@ mca_btl_ofi_register_mem(struct mca_btl_base_module_t *btl,
     mca_btl_ofi_module_t *ofi_module = (mca_btl_ofi_module_t *) btl;
     mca_btl_ofi_reg_t *reg;
     int access_flags = flags & MCA_BTL_REG_FLAG_ACCESS_ANY;
-    int rc;
+    int rc, dev_id;
     uint32_t cache_flags = 0;
-    if (ofi_module->bypass_cache) {
-	   cache_flags |= MCA_RCACHE_FLAGS_CACHE_BYPASS;
+    uint64_t check_addr_flags;
+
+    if (opal_accelerator.check_addr(base, &dev_id, &check_addr_flags) > 0) {
+        cache_flags |= MCA_RCACHE_FLAGS_ACCELERATOR_MEM;
     }
 
     rc = ofi_module->rcache->rcache_register(ofi_module->rcache, base, size, cache_flags, access_flags,
@@ -238,7 +285,7 @@ int mca_btl_ofi_reg_mem(void *reg_data, void *base, size_t size,
                         mca_rcache_base_registration_t *reg)
 {
     int rc, dev_id;
-    uint64_t flags;
+    uint64_t flags, mr_flags = 0;
     static uint64_t access_flags = FI_REMOTE_WRITE | FI_REMOTE_READ | FI_READ | FI_WRITE;
     struct fi_mr_attr attr = {0};
     struct iovec iov = {0};
@@ -265,7 +312,7 @@ int mca_btl_ofi_reg_mem(void *reg_data, void *base, size_t size,
                 attr.iface = FI_HMEM_CUDA;
                 opal_accelerator.get_device(&attr.device.cuda);
 #if OPAL_OFI_HAVE_FI_HMEM_ROCR
-	    } else if (0 == strcmp(opal_accelerator_base_selected_component.base_version.mca_component_name, "rocm")) {
+            } else if (0 == strcmp(opal_accelerator_base_selected_component.base_version.mca_component_name, "rocm")) {
                 attr.iface = FI_HMEM_ROCR;
                 opal_accelerator.get_device(&attr.device.cuda);
 #endif
@@ -277,11 +324,15 @@ int mca_btl_ofi_reg_mem(void *reg_data, void *base, size_t size,
             } else {
                 return OPAL_ERROR;
             }
+#if OPAL_OFI_HAVE_FI_HMEM_DEVICE_ONLY
+            mr_flags = flags & MCA_ACCELERATOR_FLAGS_UNIFIED_MEMORY ? 0 :
+                        FI_HMEM_DEVICE_ONLY;
+#endif
         }
     }
 #endif
 
-    rc = fi_mr_regattr(btl->domain, &attr, 0, &ur->ur_mr);
+    rc = fi_mr_regattr(btl->domain, &attr, mr_flags, &ur->ur_mr);
     if (0 != rc) {
         ur->ur_mr = NULL;
         return OPAL_ERR_OUT_OF_RESOURCE;
@@ -369,11 +420,11 @@ int mca_btl_ofi_finalize(mca_btl_base_module_t *btl)
     }
 
     if (NULL != ofi_btl->domain) {
-        fi_close(&ofi_btl->domain->fid);
+        opal_common_ofi_domain_release(ofi_btl->domain);
     }
 
     if (NULL != ofi_btl->fabric) {
-        fi_close(&ofi_btl->fabric->fid);
+        opal_common_ofi_fabric_release(ofi_btl->fabric);
     }
 
     if (NULL != ofi_btl->fabric_info) {
@@ -390,6 +441,8 @@ int mca_btl_ofi_finalize(mca_btl_base_module_t *btl)
     OBJ_DESTRUCT(&ofi_btl->id_to_endpoint);
     OBJ_DESTRUCT(&ofi_btl->module_lock);
 
+    free(ofi_btl->domain_name);
+    free(ofi_btl->ep_name);
     free(btl);
 
     return OPAL_SUCCESS;
@@ -499,4 +552,5 @@ mca_btl_ofi_module_t mca_btl_ofi_module_template = {
         .btl_add_procs = mca_btl_ofi_add_procs,
         .btl_del_procs = mca_btl_ofi_del_procs,
         .btl_finalize = mca_btl_ofi_finalize,
+        .btl_register_error = mca_btl_ofi_register_error,
     }};

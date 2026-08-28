@@ -21,6 +21,7 @@
  * Copyright (c) 2018-2025 Triad National Security, LLC. All rights
  *                         reserved.
  * Copyright (c) 2021      IBM Corporation.  All rights reserved.
+ * Copyright (c) 2026      Jeffrey M. Squyres.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -72,14 +73,13 @@ typedef void (ompi_op_fortran_handler_fn_t)(const void *, void *,
 typedef void (ompi_op_fortran_handler_bc_fn_t)(const void *, void *,
                                                size_t *, MPI_Fint *);
 
-/**
- * Typedef for Java op functions intercept (used for user-defined
- * MPI.Ops).
+/*
+ * MPI-5 ABI: Typedef for MPI-5 ABI datatype converter function to use
+ * to convert from the OMPI internal datatype to the MPI-5
+ * variant when invoking a user defined op.
  */
-typedef void (ompi_op_java_handler_fn_t)(const void *, void *, int *,
-                                         struct ompi_datatype_t **,
-                                         int baseType,
-                                         void *jnienv, void *object);
+
+typedef ompi_datatype_t * (*ompi_op_type_convert_to_abi_fn_t)(ompi_datatype_t *);
 
 /*
  * Flags for MPI_Op
@@ -88,8 +88,6 @@ typedef void (ompi_op_java_handler_fn_t)(const void *, void *, int *,
 #define OMPI_OP_FLAGS_INTRINSIC    0x0001
 /** Set if the callback function is in Fortran */
 #define OMPI_OP_FLAGS_FORTRAN_FUNC 0x0002
-/** Set if the callback function is in Java */
-#define OMPI_OP_FLAGS_JAVA_FUNC    0x0008
 /** Set if the callback function is associative (MAX and SUM will both
     have ASSOC set -- in fact, it will only *not* be set if we
     implement some extensions to MPI, because MPI says that all
@@ -162,19 +160,12 @@ struct ompi_op_t {
         ompi_op_fortran_handler_fn_t *fort_fn;
         /** Fortran handler function pointer  - bigcount*/
         ompi_op_fortran_handler_bc_fn_t *fort_fn_bc;
-        /** Java intercept function data */
-        struct {
-            /* The OMPI C++ callback/intercept function */
-            ompi_op_java_handler_fn_t *intercept_fn;
-            /* The Java run time environment */
-            void *jnienv, *object;
-            int baseType;
-        } java_data;
     } o_func;
 
     /** 3-buffer functions, which is only for intrinsic ops.  No need
         for the C/C++/Fortran user-defined functions. */
     ompi_op_base_op_3buff_fns_t o_3buff_intrinsic;
+    ompi_op_type_convert_to_abi_fn_t o_datatype_converter;
 };
 
 /**
@@ -367,13 +358,6 @@ int ompi_op_init(void);
 ompi_op_t *ompi_op_create_user(bool commute,
                                bool bigcount,
                                ompi_op_fortran_handler_fn_t func);
-
-/**
- * Mark an MPI_Op as holding a Java callback function, and cache that
- * function in the MPI_Op.
- */
-OMPI_DECLSPEC void ompi_op_set_java_callback(ompi_op_t *op,  void *jnienv,
-                                             void *object, int baseType);
 
 /**
  * Check to see if an op is intrinsic.
@@ -594,12 +578,12 @@ static inline void ompi_op_reduce(ompi_op_t * op, const void *source,
             op->o_func.fort_fn_bc(source, target, &full_count, &f_dtype);
         }
         return;
-    } else if (0 != (op->o_flags & OMPI_OP_FLAGS_JAVA_FUNC)) {
-        op->o_func.java_data.intercept_fn(source, target, &count, &dtype,
-                                          op->o_func.java_data.baseType,
-                                          op->o_func.java_data.jnienv,
-                                          op->o_func.java_data.object);
-        return;
+    }
+    /*
+     * MPI-5 ABI: see if we need to translate the datatype
+     */
+    if (NULL != op->o_datatype_converter) {
+        dtype = op->o_datatype_converter(dtype);
     }
     if (0 == (op->o_flags & OMPI_OP_FLAGS_BIGCOUNT)) {
         op->o_func.c_fn(source, target, &count, &dtype);
@@ -613,6 +597,12 @@ static inline void ompi_3buff_op_user (ompi_op_t *op, void * restrict source1, v
                                        void * restrict result, size_t full_count, struct ompi_datatype_t *dtype)
 {
     ompi_datatype_copy_content_same_ddt (dtype, full_count, (char*)result, (char*)source1);
+    /*
+     * MPI-5 ABI: see if we need to translate the datatype
+     */
+    if (NULL != op->o_datatype_converter) {
+        dtype = op->o_datatype_converter(dtype);
+    }
     if (0 == (op->o_flags & OMPI_OP_FLAGS_BIGCOUNT)) {
         assert(full_count <= INT_MAX);
         int count = (int)full_count;  /* protected by loop in only caller of this function */

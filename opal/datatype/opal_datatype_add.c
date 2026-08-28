@@ -14,6 +14,7 @@
  * Copyright (c) 2014      Cisco Systems, Inc.  All rights reserved.
  * Copyright (c) 2017      Research Organization for Information Science
  *                         and Technology (RIST). All rights reserved.
+ * Copyright (c) 2026      Stony Brook University.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -29,6 +30,11 @@
 #include "opal/datatype/opal_datatype.h"
 #include "opal/datatype/opal_datatype_internal.h"
 #include "opal/util/output.h"
+
+/* The optimizer-private element flag must stay outside the OPAL element flag mask, so that masking
+ * a predefined type's datatype-level flags into an element (below) cannot set or clear it. */
+_Static_assert(0 == (OPAL_DATATYPE_OPTIMIZED_TYPE_CHANGED & OPAL_DATATYPE_FLAG_ELEM_MASK),
+               "OPAL_DATATYPE_OPTIMIZED_TYPE_CHANGED overlaps the OPAL element flag mask");
 
 /* macros to play with the flags */
 #define SET_CONTIGUOUS_FLAG(INT_VALUE) (INT_VALUE) = (INT_VALUE) | (OPAL_DATATYPE_FLAG_CONTIGUOUS)
@@ -127,7 +133,7 @@ static inline int IMAX(int a, int b)
 int32_t opal_datatype_add(opal_datatype_t *pdtBase, const opal_datatype_t *pdtAdd, size_t count,
                           ptrdiff_t disp, ptrdiff_t extent)
 {
-    uint32_t newLength, place_needed = 0, i;
+    opal_datatype_count_t newLength, place_needed = 0, i;
     short localFlags = 0; /* no specific options yet */
     dt_elem_desc_t *pLast, *pLoop = NULL;
     ptrdiff_t lb, ub, true_lb, true_ub, epsilon, old_true_ub;
@@ -149,7 +155,10 @@ int32_t opal_datatype_add(opal_datatype_t *pdtBase, const opal_datatype_t *pdtAd
         extent = (pdtAdd->ub - pdtAdd->lb);
     }
 
-    /* Deal with the special markers (OPAL_DATATYPE_LB and OPAL_DATATYPE_UB) */
+    /* Deal with the special markers (OPAL_DATATYPE_LB and OPAL_DATATYPE_UB).  These back
+     * the MPI_LB/MPI_UB pseudo-type handles (exposed at the MPI layer only under
+     * --enable-mpi1-compatibility) and share the same bound-marker machinery that
+     * MPI_Type_create_resized relies on, so the engine handles them unconditionally. */
     if (OPAL_DATATYPE_LB == pdtAdd->id) {
         pdtBase->bdt_used |= (((uint32_t) 1) << OPAL_DATATYPE_LB);
         if (pdtBase->flags & OPAL_DATATYPE_FLAG_USER_LB) {
@@ -313,7 +322,11 @@ int32_t opal_datatype_add(opal_datatype_t *pdtBase, const opal_datatype_t *pdtAd
             pdtBase->ptypes[pdtAdd->id] += count;
         }
 
-        pLast->elem.common.flags = pdtAdd->flags & ~(OPAL_DATATYPE_FLAG_COMMITTED);
+        /* Restrict the copy to the OPAL element flags.  Any upper-layer extension flags live in the
+         * top 16 bits of the flags word and cannot reach the 16-bit element field anyway, but the
+         * mask also drops the OPAL datatype-level bits that are meaningless per element. */
+        pLast->elem.common.flags = pdtAdd->flags
+                                   & (OPAL_DATATYPE_FLAG_ELEM_MASK & ~OPAL_DATATYPE_FLAG_COMMITTED);
         pLast->elem.common.type = pdtAdd->id;
         pLast->elem.disp = disp;
         pLast->elem.extent = (ptrdiff_t) count * extent;
@@ -332,7 +345,7 @@ int32_t opal_datatype_add(opal_datatype_t *pdtBase, const opal_datatype_t *pdtAd
         pdtBase->desc.used++;
     } else {
         /* keep trace of the total number of basic datatypes in the datatype definition */
-        pdtBase->loops += pdtAdd->loops;
+        pdtBase->stack_depth += pdtAdd->stack_depth;
         pdtBase->flags |= (pdtAdd->flags & OPAL_DATATYPE_FLAG_USER_LB);
         pdtBase->flags |= (pdtAdd->flags & OPAL_DATATYPE_FLAG_USER_UB);
         if ((NULL != pdtBase->ptypes) && (NULL != pdtAdd->ptypes)) {
@@ -391,8 +404,10 @@ int32_t opal_datatype_add(opal_datatype_t *pdtBase, const opal_datatype_t *pdtAd
             if (count != 1) {
                 pLoop = pLast;
                 CREATE_LOOP_START(pLast, count, pdtAdd->desc.used + 1, extent,
-                                  (pdtAdd->flags & ~(OPAL_DATATYPE_FLAG_COMMITTED)));
-                pdtBase->loops += 2;
+                                  (pdtAdd->flags
+                                   & (OPAL_DATATYPE_FLAG_ELEM_MASK
+                                      & ~OPAL_DATATYPE_FLAG_COMMITTED)));
+                pdtBase->stack_depth += 2;
                 pdtBase->desc.used += 2;
                 pLast++;
             }

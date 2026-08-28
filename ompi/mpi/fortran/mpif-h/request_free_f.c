@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_REQUEST_FREE = ompi_request_free_f
 #pragma weak pmpi_request_free = ompi_request_free_f
 #pragma weak pmpi_request_free_ = ompi_request_free_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_REQUEST_FREE,
                            pmpi_request_free,
                            pmpi_request_free_,
                            pmpi_request_free__,
-                           pompi_request_free_f,
+                           ompi_request_free_f,
                            (MPI_Fint *request, MPI_Fint *ierr),
                            (request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_REQUEST_FREE = ompi_request_free_f
 #pragma weak mpi_request_free = ompi_request_free_f
 #pragma weak mpi_request_free_ = ompi_request_free_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_REQUEST_FREE,
 #pragma weak MPI_Request_free_f = ompi_request_free_f
 #pragma weak MPI_Request_free_f08 = ompi_request_free_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_REQUEST_FREE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_REQUEST_FREE,
                            mpi_request_free,
                            mpi_request_free_,
                            mpi_request_free__,
                            ompi_request_free_f,
                            (MPI_Fint *request, MPI_Fint *ierr),
                            (request, ierr) )
-#else
-#define ompi_request_free_f pompi_request_free_f
-#endif
 #endif
 
 

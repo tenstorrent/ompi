@@ -7,7 +7,8 @@
  *                         Laboratory, ICS Forth. All rights reserved.
  * Copyright (c) 2024      Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
- * Copyright (c) 2024      NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2024-2026 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2026      Stony Brook University. All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -54,7 +55,7 @@
 int mca_coll_han_comm_create_new(struct ompi_communicator_t *comm,
                                  mca_coll_han_module_t *han_module)
 {
-    int low_rank, low_size, up_rank, w_rank, w_size;
+    int low_rank, low_size, up_rank, w_size, node_leader_w_rank;
     ompi_communicator_t **low_comm = &(han_module->sub_comm[INTRA_NODE]);
     ompi_communicator_t **up_comm = &(han_module->sub_comm[INTER_NODE]);
     mca_coll_han_collectives_fallback_t fallbacks;
@@ -128,7 +129,6 @@ int mca_coll_han_comm_create_new(struct ompi_communicator_t *comm,
     OBJ_CONSTRUCT(&comm_info, opal_info_t);
 
     /* Create topological sub-communicators */
-    w_rank = ompi_comm_rank(comm);
     w_size = ompi_comm_size(comm);
 
     /*
@@ -150,11 +150,56 @@ int mca_coll_han_comm_create_new(struct ompi_communicator_t *comm,
     low_rank = ompi_comm_rank(*low_comm);
 
     /*
-     * This sub-communicator contains one process per node: processes with the
-     * same intra-node rank id share such a sub-communicator
+     * This sub-communicator contains one process per node: all ranks that share
+     * a given intra-node rank id (low_rank) form one such sub-communicator.
+     *
+     * Sort key = global rank of this node's leader (the rank with low_rank 0),
+     * NOT each rank's own w_rank.
+     *
+     * Why: the split produces one inter-node "column" for each low_rank value
+     * 0 .. low_size-1.  Ranks on the same physical node but with different
+     * low_rank values end up in different columns.  When the sort key is w_rank,
+     * each column is ordered independently by global rank, so a rank's position
+     * (up_rank) in its column can differ from its node-mates in other columns.
+     * The vrank formula  vrank = low_size * up_rank + low_rank  then assigns
+     * inconsistent node identifiers to ranks on the same node, breaking the
+     * role-assignment logic in gatherv, scatterv, and alltoall*.
+     *
+     * Using the node leader's global rank as the key guarantees that every rank
+     * on node K uses the same key regardless of which column it sits in, so all
+     * ranks on node K receive the same up_rank value.  The formula then
+     * correctly encodes each rank's 2-D position in the node × intra-node grid
+     * for ANY balanced rank layout, not just map-by-core.
+     *
+     * Example: 4 ranks, 2 nodes, mapped by node (NOT map-by-core)
+     *   Node 0: global ranks {0, 2}    low_rank: 0→0, 2→1
+     *   Node 1: global ranks {1, 3}    low_rank: 1→0, 3→1
+     *
+     *   Old key = w_rank:
+     *     col (low_rank=0): {0,1} sorted by w_rank → up_rank 0→0, 1→1
+     *     col (low_rank=1): {2,3} sorted by w_rank → up_rank 2→0, 3→1
+     *     up_rank is still consistent here, but for a layout like
+     *     MPI_Intercomm_merge where the same node's global ranks are
+     *     not monotone, a node's members get *different* up_rank values
+     *     across columns, e.g. up_rank=0 in col 0 but up_rank=1 in col 1.
+     *
+     *   New key = node_leader_w_rank (min global rank on the node):
+     *     Node 0 leader = rank 0;  Node 1 leader = rank 1.
+     *     col (low_rank=0): {0,1} sorted by key 0,1 → up_rank 0→0, 1→1
+     *     col (low_rank=1): {2,3} sorted by key 0,1 → up_rank 2→0, 3→1
+     *     Every rank on node 0 has up_rank=0; every rank on node 1
+     *     has up_rank=1, regardless of which column it sits in.
+     *
+     * The node leader's global rank is obtained via a pure local group
+     * translation (no communication).
      */
+    {
+        int local_zero = 0;
+        ompi_group_translate_ranks((*low_comm)->c_local_group, 1, &local_zero,
+                                   comm->c_local_group, &node_leader_w_rank);
+    }
     opal_info_set(&comm_info, "ompi_comm_coll_han_topo_level", "INTER_NODE");
-    rc = ompi_comm_split_with_info(comm, low_rank, w_rank, &comm_info, up_comm, false);
+    rc = ompi_comm_split_with_info(comm, low_rank, node_leader_w_rank, &comm_info, up_comm, false);
     if( OMPI_SUCCESS != rc ) {
         /* cannot create subcommunicators. Return the error upstream */
         goto return_with_error;
@@ -164,11 +209,13 @@ int mca_coll_han_comm_create_new(struct ompi_communicator_t *comm,
 
     /*
      * Set my virtual rank number.
-     * my rank # = <intra-node comm size> * <inter-node rank number>
-     *             + <intra-node rank number>
-     * WARNING: this formula works only if the ranks are perfectly spread over
-     *          the nodes
-     * TODO: find a better way of doing
+     * vrank = low_size * up_rank + low_rank
+     *
+     * This encodes the 2-D position of a rank in the node × intra-node grid:
+     * up_rank  = which node (row), low_rank = position within the node (column).
+     * Because the up_comm split above uses node_leader_w_rank as the key, all
+     * ranks on the same node share the same up_rank across every column, so
+     * the formula is valid for any balanced rank layout.
      */
     vrank = low_size * up_rank + low_rank;
     vranks = (int *)malloc(sizeof(int) * w_size);
@@ -206,6 +253,11 @@ int mca_coll_han_comm_create_new(struct ompi_communicator_t *comm,
     HAN_SUBCOM_RESTORE_COLLECTIVE(fallbacks, comm, han_module, scatterv);
 
     OBJ_DESTRUCT(&comm_info);
+
+    /* Retain sub-communicators so they survive finalize ordering */
+    OBJ_RETAIN(*low_comm);
+    OBJ_RETAIN(*up_comm);
+
     return OMPI_SUCCESS;
 
 return_with_error:
@@ -229,11 +281,11 @@ return_with_error:
 int mca_coll_han_comm_create(struct ompi_communicator_t *comm,
                              mca_coll_han_module_t *han_module)
 {
-    int low_rank, low_size, up_rank, w_rank, w_size;
+    int low_rank, low_size, up_rank, w_size, node_leader_w_rank;
     mca_coll_han_collectives_fallback_t fallbacks;
-    ompi_communicator_t **low_comms;
-    ompi_communicator_t **up_comms;
-    int vrank, *vranks;
+    ompi_communicator_t **low_comms = NULL, **up_comms = NULL;
+    int vrank, *vranks = NULL;
+    int rc;
     opal_info_t comm_info;
 
     /* use cached communicators if possible */
@@ -242,6 +294,8 @@ int mca_coll_han_comm_create(struct ompi_communicator_t *comm,
         han_module->cached_vranks != NULL) {
         return OMPI_SUCCESS;
     }
+
+    OBJ_CONSTRUCT(&comm_info, opal_info_t);
 
     /*
      * We cannot use han allreduce and allgather without sub-communicators,
@@ -276,10 +330,14 @@ int mca_coll_han_comm_create(struct ompi_communicator_t *comm,
      * all participants.
      */
     int local_procs = ompi_group_count_local_peers(comm->c_local_group);
-    comm->c_coll->coll_allreduce(MPI_IN_PLACE, &local_procs, 1, MPI_INT,
-                                 MPI_MAX, comm,
-                                 comm->c_coll->coll_allreduce_module);
+    rc = comm->c_coll->coll_allreduce(MPI_IN_PLACE, &local_procs, 1, MPI_INT,
+                                      MPI_MAX, comm,
+                                      comm->c_coll->coll_allreduce_module);
+    if (OMPI_SUCCESS != rc) {
+        goto final_agree;
+    }
     if( local_procs == 1 ) {
+        OBJ_DESTRUCT(&comm_info);
         /* restore saved collectives */
         HAN_SUBCOM_RESTORE_COLLECTIVE(fallbacks, comm, han_module, alltoall);
         HAN_SUBCOM_RESTORE_COLLECTIVE(fallbacks, comm, han_module, alltoallv);
@@ -297,22 +355,22 @@ int mca_coll_han_comm_create(struct ompi_communicator_t *comm,
     }
 
     /* create communicators if there is no cached communicator */
-    w_rank = ompi_comm_rank(comm);
     w_size = ompi_comm_size(comm);
-    low_comms = (struct ompi_communicator_t **)malloc(COLL_HAN_LOW_MODULES *
+    low_comms = (struct ompi_communicator_t **)calloc(COLL_HAN_LOW_MODULES,
                                                       sizeof(struct ompi_communicator_t *));
-    up_comms = (struct ompi_communicator_t **)malloc(COLL_HAN_UP_MODULES *
+    up_comms = (struct ompi_communicator_t **)calloc(COLL_HAN_UP_MODULES,
                                                      sizeof(struct ompi_communicator_t *));
-
-    OBJ_CONSTRUCT(&comm_info, opal_info_t);
 
     /*
      * Upgrade sm module priority to set up low_comms[0] with sm module
      * This sub-communicator contains the ranks that share my node.
      */
     opal_info_set(&comm_info, "ompi_comm_coll_preference", "tuned,^han");
-    ompi_comm_split_type(comm, MPI_COMM_TYPE_SHARED, 0,
-                         &comm_info, &(low_comms[0]));
+    rc = ompi_comm_split_type(comm, MPI_COMM_TYPE_SHARED, 0,
+                              &comm_info, &(low_comms[0]));
+    if (OMPI_SUCCESS != rc) {
+        goto final_agree;
+    }
     assert(OMPI_COMM_IS_DISJOINT_SET(low_comms[0]) && !OMPI_COMM_IS_DISJOINT(low_comms[0]));
 
     /*
@@ -326,39 +384,78 @@ int mca_coll_han_comm_create(struct ompi_communicator_t *comm,
      * This sub-communicator contains the ranks that share my node.
      */
     opal_info_set(&comm_info, "ompi_comm_coll_preference", "sm,^han");
-    ompi_comm_split_type(comm, MPI_COMM_TYPE_SHARED, 0,
+    rc = ompi_comm_split_type(comm, MPI_COMM_TYPE_SHARED, 0,
                          &comm_info, &(low_comms[1]));
+    if (OMPI_SUCCESS != rc) {
+        goto final_agree;
+    }
     assert(OMPI_COMM_IS_DISJOINT_SET(low_comms[1]) && !OMPI_COMM_IS_DISJOINT(low_comms[1]));
 
     opal_info_set(&comm_info, "ompi_comm_coll_preference", "xhc,^han");
-    ompi_comm_split_type(comm, MPI_COMM_TYPE_SHARED, 0,
+    rc = ompi_comm_split_type(comm, MPI_COMM_TYPE_SHARED, 0,
                          &comm_info, &(low_comms[2]));
+    if (OMPI_SUCCESS != rc) {
+        goto final_agree;
+    }
+    assert(OMPI_COMM_IS_DISJOINT_SET(low_comms[2]) && !OMPI_COMM_IS_DISJOINT(low_comms[2]));
+    /*
+     * Determine the global rank of this node's leader (the rank with low_rank 0
+     * in low_comms[0]).  This is computed locally with no communication.
+     *
+     * All up_comm splits below use node_leader_w_rank as the sort key instead
+     * of each rank's own w_rank.  See mca_coll_han_comm_create_new for the
+     * full explanation; in short, this guarantees that every rank on the same
+     * physical node receives the same up_rank across all up_comm columns
+     * (one column per low_rank value), making the vrank formula valid for any
+     * balanced rank layout.
+     *
+     * Example: 4 ranks, 2 nodes, global ranks {0,2} on node 0 / {1,3} on node 1
+     *   node 0 leader = rank 0, node 1 leader = rank 1
+     *   Both col (low_rank=0) and col (low_rank=1) sort by {0,1} not {w_rank},
+     *   so rank 0 and rank 2 both get up_rank=0, rank 1 and rank 3 both get
+     *   up_rank=1 — consistent across columns.
+     */
+    {
+        int local_zero = 0;
+        ompi_group_translate_ranks(low_comms[0]->c_local_group, 1, &local_zero,
+                                   comm->c_local_group, &node_leader_w_rank);
+    }
 
     /*
-     * Upgrade libnbc module priority to set up up_comms[0] with libnbc module
-     * This sub-communicator contains one process per node: processes with the
-     * same intra-node rank id share such a sub-communicator
+     * Upgrade libnbc module priority to set up up_comms[0] with libnbc module.
+     * One process per node: processes with the same intra-node rank id share
+     * this sub-communicator.
      */
     opal_info_set(&comm_info, "ompi_comm_coll_preference", "libnbc,^han");
-    ompi_comm_split_with_info(comm, low_rank, w_rank, &comm_info, &(up_comms[0]), false);
+    rc = ompi_comm_split_with_info(comm, low_rank, node_leader_w_rank, &comm_info, &(up_comms[0]), false);
+    if (OMPI_SUCCESS != rc) {
+        goto final_agree;
+    }
     up_rank = ompi_comm_rank(up_comms[0]);
     assert(OMPI_COMM_IS_DISJOINT_SET(up_comms[0]) && OMPI_COMM_IS_DISJOINT(up_comms[0]));
 
     /*
-     * Upgrade adapt module priority to set up up_comms[0] with adapt module
-     * This sub-communicator contains one process per node.
+     * Upgrade adapt module priority to set up up_comms[1] with adapt module.
+     * One process per node.
      */
     opal_info_set(&comm_info, "ompi_comm_coll_preference", "adapt,^han");
-    ompi_comm_split_with_info(comm, low_rank, w_rank, &comm_info, &(up_comms[1]), false);
+    rc = ompi_comm_split_with_info(comm, low_rank, node_leader_w_rank, &comm_info, &(up_comms[1]), false);
+    if (OMPI_SUCCESS != rc) {
+        goto final_agree;
+    }
     assert(OMPI_COMM_IS_DISJOINT_SET(up_comms[1]) && OMPI_COMM_IS_DISJOINT(up_comms[1]));
 
     /*
      * Set my virtual rank number.
-     * my rank # = <intra-node comm size> * <inter-node rank number>
-     *             + <intra-node rank number>
-     * WARNING: this formula works only if the ranks are perfectly spread over
-     *          the nodes
-     * TODO: find a better way of doing
+     * vrank = low_size * up_rank + low_rank
+     *
+     * Encodes the 2-D position of this rank in the node × intra-node grid:
+     *   up_rank  = which node (row)
+     *   low_rank = position within the node (column)
+     *
+     * Because the up_comm splits above use node_leader_w_rank as the key,
+     * all ranks on the same node share the same up_rank value across every
+     * column, so this formula is valid for any balanced rank layout.
      */
     vrank = low_size * up_rank + low_rank;
     vranks = (int *)malloc(sizeof(int) * w_size);
@@ -366,15 +463,94 @@ int mca_coll_han_comm_create(struct ompi_communicator_t *comm,
      * gather vrank from each process so every process will know other processes
      * vrank
      */
-    comm->c_coll->coll_allgather(&vrank, 1, MPI_INT, vranks, 1, MPI_INT, comm,
+    rc = comm->c_coll->coll_allgather(&vrank, 1, MPI_INT, vranks, 1, MPI_INT, comm,
                                  comm->c_coll->coll_allgather_module);
-
+    if (OMPI_SUCCESS != rc) {
+        goto final_agree;
+    }
     /*
      * Set the cached info
      */
     han_module->cached_low_comms = low_comms;
     han_module->cached_up_comms = up_comms;
     han_module->cached_vranks = vranks;
+
+    /* Retain sub-communicators so they survive finalize ordering */
+    for(int i = 0; i < COLL_HAN_LOW_MODULES; i++) {
+        OBJ_RETAIN(low_comms[i]);
+    }
+    for(int i = 0; i < COLL_HAN_UP_MODULES; i++) {
+        OBJ_RETAIN(up_comms[i]);
+    }
+
+
+final_agree:
+
+    OBJ_DESTRUCT(&comm_info);
+
+    if (OMPI_SUCCESS != rc) {
+        /**
+         * Revoke the input communicator to ensure no process is stuck.
+         */
+        ompi_comm_revoke_internal(comm);
+    }
+
+    /**
+     * Agree that everyone has successfully created the sub-communicators.
+     */
+
+    int agree_flag = (OMPI_SUCCESS == rc) ? 1 : 0;
+    ompi_group_t *failed_group = &ompi_mpi_group_empty.group;
+    int agree_rc = comm->c_coll->coll_agree( &agree_flag,
+                                    1,
+                                    &ompi_mpi_int.dt,
+                                    &ompi_mpi_op_band.op,
+                                    &failed_group, false,
+                                    comm,
+                                    comm->c_coll->coll_agree_module);
+
+    if (OMPI_SUCCESS != agree_rc) {
+        agree_flag = 0;  /* agree failed so make sure to tear everything down */
+        rc = agree_rc;
+    }
+
+    if (!agree_flag) {
+        han_module->enabled = false;  /* entire module set to pass-through from now on */
+        if (han_module->cached_low_comms == low_comms) {
+            han_module->cached_low_comms = NULL;
+        }
+        if (han_module->cached_up_comms == up_comms) {
+            han_module->cached_up_comms = NULL;
+        }
+        if (han_module->cached_vranks == vranks) {
+            han_module->cached_vranks = NULL;
+        }
+        if (low_comms != NULL) {
+            for(int i = 0; i < COLL_HAN_LOW_MODULES; i++) {
+                if (NULL != low_comms[i]) {
+                    ompi_comm_revoke_internal(low_comms[i]);
+                    ompi_comm_free(&low_comms[i]);
+                }
+            }
+            free(low_comms);
+            low_comms = NULL;
+        }
+        if (up_comms != NULL) {
+            for(int i = 0; i < COLL_HAN_UP_MODULES; i++) {
+                if (NULL != up_comms[i]) {
+                    ompi_comm_revoke_internal(up_comms[i]);
+                    ompi_comm_free(&up_comms[i]);
+                }
+            }
+            free(up_comms);
+            up_comms = NULL;
+        }
+        if (NULL != vranks) {
+            free(vranks);
+            vranks = NULL;
+        }
+        return rc;  /* sub-communicator creation failed on at least one process */
+    }
 
     /* Reset the saved collectives to point back to HAN */
     HAN_SUBCOM_RESTORE_COLLECTIVE(fallbacks, comm, han_module, alltoall);
@@ -389,6 +565,33 @@ int mca_coll_han_comm_create(struct ompi_communicator_t *comm,
     HAN_SUBCOM_RESTORE_COLLECTIVE(fallbacks, comm, han_module, scatter);
     HAN_SUBCOM_RESTORE_COLLECTIVE(fallbacks, comm, han_module, scatterv);
 
-    OBJ_DESTRUCT(&comm_info);
     return OMPI_SUCCESS;
+}
+
+int mca_coll_han_revoke_local(ompi_communicator_t *comm,
+                              mca_coll_base_module_t *module)
+{
+    // Note that this "coll" revokes the subcomms regardless of whether the
+    // parent comm is "coll" revoked or "fully" revoked, so it is important
+    // to only use collective tags on communication in these subcomms. Else,
+    // one should check the impact to the overall revocation process before
+    // changing these to "fully" revoking the subcomms.
+    mca_coll_han_module_t *han_module = (mca_coll_han_module_t*) module;
+    for(int i = 0; i < NB_TOPO_LVL; i++){
+        if(NULL == han_module->sub_comm[i]) continue;
+        ompi_comm_revoke_local(han_module->sub_comm[i], true);
+    }
+    if(han_module->cached_low_comms != NULL){
+        for(int i = 0; i < COLL_HAN_LOW_MODULES; i++){
+            if(NULL == han_module->cached_low_comms[i]) continue;
+            ompi_comm_revoke_local(han_module->cached_low_comms[i], true);
+        }
+    }
+    if(han_module->cached_up_comms != NULL){
+        for(int i = 0; i < COLL_HAN_UP_MODULES; i++){
+            if(NULL == han_module->cached_up_comms[i]) continue;
+            ompi_comm_revoke_local(han_module->cached_up_comms[i], true);
+        }
+    }
+    return MPI_SUCCESS;
 }

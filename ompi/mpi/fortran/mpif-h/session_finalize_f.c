@@ -29,7 +29,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_SESSION_FINALIZE = ompi_session_finalize_f
 #pragma weak pmpi_session_finalize = ompi_session_finalize_f
 #pragma weak pmpi_session_finalize_ = ompi_session_finalize_f
@@ -42,14 +42,14 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SESSION_FINALIZE,
                             pmpi_session_finalize,
                             pmpi_session_finalize_,
                             pmpi_session_finalize__,
-                            pompi_session_finalize_f,
+                            ompi_session_finalize_f,
                             (MPI_Fint *session, MPI_Fint *ierr),
                             (session, ierr) )
 #endif
 #endif
 
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_SESSION_FINALIZE = ompi_session_finalize_f
 #pragma weak mpi_session_finalize = ompi_session_finalize_f
 #pragma weak mpi_session_finalize_ = ompi_session_finalize_f
@@ -58,17 +58,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SESSION_FINALIZE,
 #pragma weak MPI_Session_finalize_f = ompi_session_finalize_f
 #pragma weak MPI_Session_finalize_f08 = ompi_session_finalize_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_SESSION_FINALIZE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_SESSION_FINALIZE,
                             mpi_session_finalize,
                             mpi_session_finalize_,
                             mpi_session_finalize__,
                             ompi_session_finalize_f,
                             (MPI_Fint *session, MPI_Fint *ierr),
                             (session, ierr) )
-#else
-#define ompi_session_finalize_f pompi_session_finalize_f
-#endif
 #endif
 
 void ompi_session_finalize_f(MPI_Fint *session, MPI_Fint *ierr)

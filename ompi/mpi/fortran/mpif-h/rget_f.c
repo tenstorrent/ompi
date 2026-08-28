@@ -29,7 +29,7 @@
 
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_RGET = ompi_rget_f
 #pragma weak pmpi_rget = ompi_rget_f
 #pragma weak pmpi_rget_ = ompi_rget_f
@@ -42,13 +42,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_RGET,
                             pmpi_rget,
                             pmpi_rget_,
                             pmpi_rget__,
-                            pompi_rget_f,
+                            ompi_rget_f,
                             (char *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, MPI_Fint *target_rank, MPI_Aint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *win, MPI_Fint *request, MPI_Fint *ierr),
                             (origin_addr, origin_count, origin_datatype, target_rank, target_disp, target_count, target_datatype, win, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_RGET = ompi_rget_f
 #pragma weak mpi_rget = ompi_rget_f
 #pragma weak mpi_rget_ = ompi_rget_f
@@ -57,17 +57,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_RGET,
 #pragma weak MPI_Rget_f = ompi_rget_f
 #pragma weak MPI_Rget_f08 = ompi_rget_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_RGET,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_RGET,
                             mpi_rget,
                             mpi_rget_,
                             mpi_rget__,
                             ompi_rget_f,
                             (char *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, MPI_Fint *target_rank, MPI_Aint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *win, MPI_Fint *request, MPI_Fint *ierr),
                             (origin_addr, origin_count, origin_datatype, target_rank, target_disp, target_count, target_datatype, win, request, ierr) )
-#else
-#define ompi_rget_f pompi_rget_f
-#endif
 #endif
 
 

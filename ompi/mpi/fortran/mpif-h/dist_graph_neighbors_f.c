@@ -19,7 +19,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_DIST_GRAPH_NEIGHBORS = ompi_dist_graph_neighbors_f
 #pragma weak pmpi_dist_graph_neighbors = ompi_dist_graph_neighbors_f
 #pragma weak pmpi_dist_graph_neighbors_ = ompi_dist_graph_neighbors_f
@@ -32,13 +32,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_DIST_GRAPH_NEIGHBORS,
                             pmpi_dist_graph_neighbors,
                             pmpi_dist_graph_neighbors_,
                             pmpi_dist_graph_neighbors__,
-                            pompi_dist_graph_neighbors_f,
+                            ompi_dist_graph_neighbors_f,
                             (MPI_Fint* comm, MPI_Fint* maxindegree, MPI_Fint* sources, MPI_Fint* sourceweights, MPI_Fint* maxoutdegree, MPI_Fint* destinations, MPI_Fint* destweights, MPI_Fint *ierr),
                             (comm, maxindegree, sources, sourceweights, maxoutdegree, destinations, destweights, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_DIST_GRAPH_NEIGHBORS = ompi_dist_graph_neighbors_f
 #pragma weak mpi_dist_graph_neighbors = ompi_dist_graph_neighbors_f
 #pragma weak mpi_dist_graph_neighbors_ = ompi_dist_graph_neighbors_f
@@ -47,19 +47,14 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_DIST_GRAPH_NEIGHBORS,
 #pragma weak MPI_Dist_graph_neighbors_f = ompi_dist_graph_neighbors_f
 #pragma weak MPI_Dist_graph_neighbors_f08 = ompi_dist_graph_neighbors_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_DIST_GRAPH_NEIGHBORS,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_DIST_GRAPH_NEIGHBORS,
                             mpi_dist_graph_neighbors,
                             mpi_dist_graph_neighbors_,
                             mpi_dist_graph_neighbors__,
                             ompi_dist_graph_neighbors_f,
                             (MPI_Fint* comm, MPI_Fint* maxindegree, MPI_Fint* sources, MPI_Fint* sourceweights, MPI_Fint* maxoutdegree, MPI_Fint* destinations, MPI_Fint* destweights, MPI_Fint *ierr),
                             (comm, maxindegree, sources, sourceweights, maxoutdegree, destinations, destweights, ierr) )
-#endif
 
-#if OMPI_BUILD_MPI_PROFILING && ! OPAL_HAVE_WEAK_SYMBOLS
-#define ompi_dist_graph_neighbors_f pompi_dist_graph_neighbors_f
-#endif
 #endif
 
 

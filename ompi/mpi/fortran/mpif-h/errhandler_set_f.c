@@ -25,7 +25,7 @@
 #include "ompi/errhandler/errhandler.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_ERRHANDLER_SET = ompi_errhandler_set_f
 #pragma weak pmpi_errhandler_set = ompi_errhandler_set_f
 #pragma weak pmpi_errhandler_set_ = ompi_errhandler_set_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ERRHANDLER_SET,
                            pmpi_errhandler_set,
                            pmpi_errhandler_set_,
                            pmpi_errhandler_set__,
-                           pompi_errhandler_set_f,
+                           ompi_errhandler_set_f,
                            (MPI_Fint *comm, MPI_Fint *errhandler, MPI_Fint *ierr),
                            (comm, errhandler, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_ERRHANDLER_SET = ompi_errhandler_set_f
 #pragma weak mpi_errhandler_set = ompi_errhandler_set_f
 #pragma weak mpi_errhandler_set_ = ompi_errhandler_set_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ERRHANDLER_SET,
 #pragma weak MPI_Errhandler_set_f = ompi_errhandler_set_f
 #pragma weak MPI_Errhandler_set_f08 = ompi_errhandler_set_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_ERRHANDLER_SET,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_ERRHANDLER_SET,
                            mpi_errhandler_set,
                            mpi_errhandler_set_,
                            mpi_errhandler_set__,
                            ompi_errhandler_set_f,
                            (MPI_Fint *comm, MPI_Fint *errhandler, MPI_Fint *ierr),
                            (comm, errhandler, ierr) )
-#else
-#define ompi_errhandler_set_f pompi_errhandler_set_f
-#endif
 #endif
 
 

@@ -27,7 +27,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_GET_ELEMENTS_X = ompi_get_elements_x_f
 #pragma weak pmpi_get_elements_x = ompi_get_elements_x_f
 #pragma weak pmpi_get_elements_x_ = ompi_get_elements_x_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GET_ELEMENTS_X,
                            pmpi_get_elements_x,
                            pmpi_get_elements_x_,
                            pmpi_get_elements_x__,
-                           pompi_get_elements_x_f,
+                           ompi_get_elements_x_f,
                            (MPI_Fint *status, MPI_Fint *datatype, MPI_Count *count, MPI_Fint *ierr),
                            (status, datatype, count, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_GET_ELEMENTS_X = ompi_get_elements_x_f
 #pragma weak mpi_get_elements_x = ompi_get_elements_x_f
 #pragma weak mpi_get_elements_x_ = ompi_get_elements_x_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GET_ELEMENTS_X,
 #pragma weak MPI_Get_elements_x_f = ompi_get_elements_x_f
 #pragma weak MPI_Get_elements_x_f08 = ompi_get_elements_x_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_GET_ELEMENTS_X,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_GET_ELEMENTS_X,
                            mpi_get_elements_x,
                            mpi_get_elements_x_,
                            mpi_get_elements_x__,
                            ompi_get_elements_x_f,
                            (MPI_Fint *status, MPI_Fint *datatype, MPI_Count *count, MPI_Fint *ierr),
                            (status, datatype, count, ierr) )
-#else
-#define ompi_get_elements_x_f pompi_get_elements_x_f
-#endif
 #endif
 
 
@@ -74,7 +70,6 @@ void ompi_get_elements_x_f(MPI_Fint *status, MPI_Fint *datatype, MPI_Count *coun
     int c_ierr;
     MPI_Datatype c_type = PMPI_Type_f2c(*datatype);
     MPI_Status   c_status;
-    OMPI_SINGLE_NAME_DECL(count);
 
     if (OMPI_IS_FORTRAN_STATUS_IGNORE(status)) {
         *count = OMPI_INT_2_FINT(0);

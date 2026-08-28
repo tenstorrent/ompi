@@ -1,6 +1,7 @@
 /* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2018      Triad National Security, LLC.  All rights reserved.
+ * Copyright (c) 2018-2025  Triad National Security, LLC.  All rights reserved.
+ * Copyright (c) 2026      Jeffrey M. Squyres.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -29,7 +30,7 @@ struct ompi_instance_t {
     opal_infosubscriber_t  super;
     opal_mutex_t           s_lock;
     int                    i_thread_level;
-    char                   i_name[MPI_MAX_OBJECT_NAME];
+    char                  *i_name;
     uint32_t               i_flags;
 
     /* Attributes */
@@ -41,6 +42,10 @@ struct ompi_instance_t {
 
     ompi_errhandler_t     *error_handler;
     ompi_errhandler_type_t errhandler_type;
+
+    /* pointer to buffer object used for buffered sends */
+    void *bsend_buffer;
+
 };
 
 typedef struct ompi_instance_t ompi_instance_t;
@@ -93,6 +98,22 @@ struct ompi_predefined_instance_t {
 typedef struct ompi_predefined_instance_t ompi_predefined_instance_t;
 
 /**
+ * MPI extensions initialization function type
+ */
+typedef int (*ompi_mpiext_init_fn_t)(void);
+
+/**
+ * @brief Register MPI extensions initialization function
+ *
+ * This function is called by libmpi to register the mpiext initialization
+ * function with libopen_mpi. This avoids a circular dependency between
+ * libopen_mpi and libmpi.
+ *
+ * @param init_fn Function pointer to mpiext init function
+ */
+OMPI_DECLSPEC void ompi_mpi_instance_register_mpiext_init(ompi_mpiext_init_fn_t init_fn);
+
+/**
  * @brief NULL instance
  */
 OMPI_DECLSPEC extern ompi_predefined_instance_t ompi_mpi_instance_null;
@@ -131,6 +152,14 @@ OMPI_DECLSPEC int ompi_mpi_instance_init (int ts_level, opal_info_t *info, ompi_
  */
 OMPI_DECLSPEC int ompi_mpi_instance_finalize (ompi_instance_t **instance);
 
+/* Serialize against instance (world and session) initialization and
+   teardown.  For use by the MPI_T entry points, whose first init/last
+   finalize share unlocked state with instance bring-up; see the
+   definitions in instance.c for the locking rationale and the
+   lock-ordering rules. */
+OMPI_DECLSPEC void ompi_mpi_instance_lock (void);
+OMPI_DECLSPEC void ompi_mpi_instance_unlock (void);
+
 
 /**
  * @brief Add a function to the finalize chain. Note this function will be called
@@ -162,6 +191,18 @@ static inline int ompi_instance_invalid (const ompi_instance_t* instance)
         return true;
     else
         return false;
+}
+
+static inline void *ompi_instance_bsend_buffer_get(ompi_instance_t *instance)
+{
+    assert(NULL != instance);
+    return instance->bsend_buffer;
+}
+
+static inline int ompi_instance_bsend_buffer_set(ompi_instance_t *instance, void *buffer)
+{
+    instance->bsend_buffer = buffer;
+    return OMPI_SUCCESS;
 }
 
 #endif /* !defined(OMPI_INSTANCE_H) */

@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_REDUCE_SCATTER = ompi_reduce_scatter_f
 #pragma weak pmpi_reduce_scatter = ompi_reduce_scatter_f
 #pragma weak pmpi_reduce_scatter_ = ompi_reduce_scatter_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_REDUCE_SCATTER,
                            pmpi_reduce_scatter,
                            pmpi_reduce_scatter_,
                            pmpi_reduce_scatter__,
-                           pompi_reduce_scatter_f,
+                           ompi_reduce_scatter_f,
                            (char *sendbuf, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, recvbuf, recvcounts, datatype, op, comm, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_REDUCE_SCATTER = ompi_reduce_scatter_f
 #pragma weak mpi_reduce_scatter = ompi_reduce_scatter_f
 #pragma weak mpi_reduce_scatter_ = ompi_reduce_scatter_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_REDUCE_SCATTER,
 #pragma weak MPI_Reduce_scatter_f = ompi_reduce_scatter_f
 #pragma weak MPI_Reduce_scatter_f08 = ompi_reduce_scatter_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_REDUCE_SCATTER,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_REDUCE_SCATTER,
                            mpi_reduce_scatter,
                            mpi_reduce_scatter_,
                            mpi_reduce_scatter__,
                            ompi_reduce_scatter_f,
                            (char *sendbuf, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, recvbuf, recvcounts, datatype, op, comm, ierr) )
-#else
-#define ompi_reduce_scatter_f pompi_reduce_scatter_f
-#endif
 #endif
 
 

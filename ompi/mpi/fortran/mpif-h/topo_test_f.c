@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_TOPO_TEST = ompi_topo_test_f
 #pragma weak pmpi_topo_test = ompi_topo_test_f
 #pragma weak pmpi_topo_test_ = ompi_topo_test_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_TOPO_TEST,
                            pmpi_topo_test,
                            pmpi_topo_test_,
                            pmpi_topo_test__,
-                           pompi_topo_test_f,
+                           ompi_topo_test_f,
                            (MPI_Fint *comm, MPI_Fint *topo_type, MPI_Fint *ierr),
                            (comm, topo_type, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_TOPO_TEST = ompi_topo_test_f
 #pragma weak mpi_topo_test = ompi_topo_test_f
 #pragma weak mpi_topo_test_ = ompi_topo_test_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_TOPO_TEST,
 #pragma weak MPI_Topo_test_f = ompi_topo_test_f
 #pragma weak MPI_Topo_test_f08 = ompi_topo_test_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_TOPO_TEST,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_TOPO_TEST,
                            mpi_topo_test,
                            mpi_topo_test_,
                            mpi_topo_test__,
                            ompi_topo_test_f,
                            (MPI_Fint *comm, MPI_Fint *topo_type, MPI_Fint *ierr),
                            (comm, topo_type, ierr) )
-#else
-#define ompi_topo_test_f pompi_topo_test_f
-#endif
 #endif
 
 

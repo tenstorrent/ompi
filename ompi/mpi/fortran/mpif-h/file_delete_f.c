@@ -26,7 +26,7 @@
 #include "ompi/file/file.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_DELETE = ompi_file_delete_f
 #pragma weak pmpi_file_delete = ompi_file_delete_f
 #pragma weak pmpi_file_delete_ = ompi_file_delete_f
@@ -39,13 +39,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_DELETE,
                            pmpi_file_delete,
                            pmpi_file_delete_,
                            pmpi_file_delete__,
-                           pompi_file_delete_f,
+                           ompi_file_delete_f,
                            (char *filename, MPI_Fint *info, MPI_Fint *ierr, int filename_len),
                            (filename, info, ierr, filename_len)  )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_DELETE = ompi_file_delete_f
 #pragma weak mpi_file_delete = ompi_file_delete_f
 #pragma weak mpi_file_delete_ = ompi_file_delete_f
@@ -54,17 +54,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_DELETE,
 #pragma weak MPI_File_delete_f = ompi_file_delete_f
 #pragma weak MPI_File_delete_f08 = ompi_file_delete_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_DELETE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_DELETE,
                            mpi_file_delete,
                            mpi_file_delete_,
                            mpi_file_delete__,
                            ompi_file_delete_f,
                            (char *filename, MPI_Fint *info, MPI_Fint *ierr, int filename_len),
                            (filename, info, ierr, filename_len) )
-#else
-#define ompi_file_delete_f pompi_file_delete_f
-#endif
 #endif
 
 

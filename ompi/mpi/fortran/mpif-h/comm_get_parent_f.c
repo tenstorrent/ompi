@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_GET_PARENT = ompi_comm_get_parent_f
 #pragma weak pmpi_comm_get_parent = ompi_comm_get_parent_f
 #pragma weak pmpi_comm_get_parent_ = ompi_comm_get_parent_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_GET_PARENT,
                            pmpi_comm_get_parent,
                            pmpi_comm_get_parent_,
                            pmpi_comm_get_parent__,
-                           pompi_comm_get_parent_f,
+                           ompi_comm_get_parent_f,
                            (MPI_Fint *parent, MPI_Fint *ierr),
                            (parent, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_GET_PARENT = ompi_comm_get_parent_f
 #pragma weak mpi_comm_get_parent = ompi_comm_get_parent_f
 #pragma weak mpi_comm_get_parent_ = ompi_comm_get_parent_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_GET_PARENT,
 #pragma weak MPI_Comm_get_parent_f = ompi_comm_get_parent_f
 #pragma weak MPI_Comm_get_parent_f08 = ompi_comm_get_parent_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_GET_PARENT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_GET_PARENT,
                            mpi_comm_get_parent,
                            mpi_comm_get_parent_,
                            mpi_comm_get_parent__,
                            ompi_comm_get_parent_f,
                            (MPI_Fint *parent, MPI_Fint *ierr),
                            (parent, ierr) )
-#else
-#define ompi_comm_get_parent_f pompi_comm_get_parent_f
-#endif
 #endif
 
 

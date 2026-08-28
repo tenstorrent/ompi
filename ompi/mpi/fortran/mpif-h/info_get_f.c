@@ -27,7 +27,7 @@
 #include "ompi/mpi/fortran/base/fortran_base_strings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_INFO_GET = ompi_info_get_f
 #pragma weak pmpi_info_get = ompi_info_get_f
 #pragma weak pmpi_info_get_ = ompi_info_get_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INFO_GET,
                             pmpi_info_get,
                             pmpi_info_get_,
                             pmpi_info_get__,
-                            pompi_info_get_f,
+                            ompi_info_get_f,
                             (MPI_Fint *info, char *key, MPI_Fint *valuelen, char *value, ompi_fortran_logical_t *flag, MPI_Fint *ierr, int key_len, int value_len),
                             (info, key, valuelen, value, flag, ierr, key_len, value_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_INFO_GET = ompi_info_get_f
 #pragma weak mpi_info_get = ompi_info_get_f
 #pragma weak mpi_info_get_ = ompi_info_get_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INFO_GET,
 #pragma weak MPI_Info_get_f = ompi_info_get_f
 #pragma weak MPI_Info_get_f08 = ompi_info_get_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_INFO_GET,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_INFO_GET,
                             mpi_info_get,
                             mpi_info_get_,
                             mpi_info_get__,
                             ompi_info_get_f,
                             (MPI_Fint *info, char *key, MPI_Fint *valuelen, char *value, ompi_fortran_logical_t *flag, MPI_Fint *ierr, int key_len, int value_len),
                             (info, key, valuelen, value, flag, ierr, key_len, value_len) )
-#else
-#define ompi_info_get_f pompi_info_get_f
-#endif
 #endif
 
 

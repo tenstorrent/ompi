@@ -16,7 +16,7 @@
 #include "ompi/communicator/communicator.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_GET_INFO = ompi_comm_get_info_f
 #pragma weak pmpi_comm_get_info = ompi_comm_get_info_f
 #pragma weak pmpi_comm_get_info_ = ompi_comm_get_info_f
@@ -29,13 +29,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_GET_INFO,
                            pmpi_comm_get_info,
                            pmpi_comm_get_info_,
                            pmpi_comm_get_info__,
-                           pompi_comm_get_info_f,
+                           ompi_comm_get_info_f,
                            (MPI_Fint *comm, MPI_Fint *info_used, MPI_Fint *ierr),
                            (comm, info_used, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_GET_INFO = ompi_comm_get_info_f
 #pragma weak mpi_comm_get_info = ompi_comm_get_info_f
 #pragma weak mpi_comm_get_info_ = ompi_comm_get_info_f
@@ -44,17 +44,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_GET_INFO,
 #pragma weak MPI_Comm_get_info_f = ompi_comm_get_info_f
 #pragma weak MPI_Comm_get_info_f08 = ompi_comm_get_info_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_GET_INFO,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_GET_INFO,
                            mpi_comm_get_info,
                            mpi_comm_get_info_,
                            mpi_comm_get_info__,
                            ompi_comm_get_info_f,
                            (MPI_Fint *comm, MPI_Fint *info_used, MPI_Fint *ierr),
                            (comm, info_used, ierr) )
-#else
-#define ompi_comm_get_info_f pompi_comm_get_info_f
-#endif
 #endif
 
 

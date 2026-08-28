@@ -48,6 +48,12 @@ OPTIONS
 
 * ``-c``, ``--config``: Show configuration options
 
+* ``--event``: Show the registered MPI_T event sources and event
+  types. With no explicit ``--level``, all event-type levels are shown
+  (unlike ``--param``, whose default is level 1); pass ``--level`` to
+  narrow the event types displayed. Event sources have no level and are
+  always shown.
+
 * ``-gmca``, ``--gmca <param> <value>``: Pass global MCA parameters
   that are applicable to all contexts.
 
@@ -59,10 +65,11 @@ OPTIONS
 * ``--internal``: Show internal MCA parameters (not meant to be
   modified by users).
 
-* ``--level <level>``: Show only variables with at most this level
-  (1-9). The default is 1 unless ``--all`` is specified without
-  ``--level``, in which case the default is 9. See the :ref:`LEVELS
-  <man1-ompi_info-levels>` section for more information.
+* ``--level <level>``: Show only variables and MPI_T event types with
+  at most this level (1-9). The default is 1 unless ``--all`` is
+  specified without ``--level``, in which case the default is 9. See
+  the :ref:`LEVELS <man1-ompi_info-levels>` section for more
+  information.
 
 * ``-mca``, ``--mca <param> <value>``: Pass context-specific MCA
   parameters; they are considered global if ``--gmca`` is not used and
@@ -83,12 +90,17 @@ OPTIONS
   output is displayed in a machine-parsable format ``--parseable``
   Synonym for ``--parsable``.
 
+* ``--color <hue>``: Control color coding: auto (default), never, always
+
 * ``--path <type>``: Show paths that Open MPI was configured
   with. Accepts the following parameters: ``prefix``, ``bindir``,
   ``libdir``, ``incdir``, ``pkglibdir``, ``sysconfdir``.
 
-* ``--pretty``: When used in conjunction with other parameters, the output is
-  displayed in "prettyprint" format (default)
+* ``--pretty-print``: When used in conjunction with other parameters, the output is
+  displayed in "prettyprint" format (default).
+
+* ``--show-failed``: Show the components that failed to load along with
+  the reason why they failed.
 
 * ``--selected-only``: Show only variables from selected components.
 

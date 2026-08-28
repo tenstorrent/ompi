@@ -14,7 +14,7 @@
  *                         reserved.
  * Copyright (c) 2018-2019 Intel, Inc.  All rights reserved.
  *
- * Copyright (c) 2018-2021 Amazon.com, Inc. or its affiliates.  All Rights reserved.
+ * Copyright (c) 2018-2025 Amazon.com, Inc. or its affiliates.  All Rights reserved.
  * Copyright (c) 2020-2023 Triad National Security, LLC. All rights
  *                         reserved.
  * $COPYRIGHT$
@@ -59,6 +59,12 @@
 static char *ofi_progress_mode;
 static bool disable_sep;
 static int mca_btl_ofi_init_device(struct fi_info *info);
+
+/* qsort comparator for an array of domain name strings */
+static int domain_name_compare(const void *a, const void *b)
+{
+    return strcmp(*(const char *const *) a, *(const char *const *) b);
+}
 
 /* validate information returned from fi_getinfo().
  * return OPAL_ERROR if we dont have what we need. */
@@ -150,7 +156,7 @@ static int mca_btl_ofi_component_register(void)
         return OPAL_ERR_OUT_OF_RESOURCE;
     }
 
-    mca_btl_ofi_component.mode = MCA_BTL_OFI_MODE_ONE_SIDED;
+    mca_btl_ofi_component.mode = MCA_BTL_OFI_MODE_FULL_SUPPORT;
     (void) mca_base_component_var_register(&mca_btl_ofi_component.super.btl_version, "mode", msg,
                                            MCA_BASE_VAR_TYPE_INT, NULL, 0, 0, OPAL_INFO_LVL_5,
                                            MCA_BASE_VAR_SCOPE_READONLY,
@@ -244,6 +250,8 @@ static int mca_btl_ofi_component_close(void)
 {
     int ret;
     ret = opal_common_ofi_close();
+    free(mca_btl_ofi_component.modules);
+    mca_btl_ofi_component.modules = NULL;
     /* If we don't sleep, sockets provider freaks out. Ummm this is a scary comment */
     sleep(1);
     return ret;
@@ -285,7 +293,8 @@ static mca_btl_base_module_t **mca_btl_ofi_component_init(int *num_btl_modules,
         return NULL;
     }
 
-    struct fi_info *info, *info_list = NULL, *selected_info = NULL;
+    struct fi_info *info, *info_list = NULL;
+    const char **unique_domains = NULL;
     struct fi_info hints = {0};
     struct fi_ep_attr ep_attr = {0};
     struct fi_rx_attr rx_attr = {0};
@@ -339,6 +348,12 @@ static mca_btl_base_module_t **mca_btl_ofi_component_init(int *num_btl_modules,
     domain_attr.control_progress = progress_mode;
     domain_attr.data_progress = progress_mode;
 
+    if (enable_mpi_threads) {
+        domain_attr.threading = FI_THREAD_SAFE;
+    } else {
+        domain_attr.threading = FI_THREAD_DOMAIN;
+    }
+
     /* select endpoint type */
     ep_attr.type = FI_EP_RDM;
 
@@ -359,7 +374,8 @@ static mca_btl_base_module_t **mca_btl_ofi_component_init(int *num_btl_modules,
     tx_attr.iov_limit = 1;
     rx_attr.iov_limit = 1;
 
-    tx_attr.op_flags = FI_DELIVERY_COMPLETE;
+    tx_attr.op_flags = FI_DELIVERY_COMPLETE | FI_COMPLETION;
+    rx_attr.op_flags = FI_COMPLETION;
 
     mca_btl_ofi_component.module_count = 0;
 
@@ -372,9 +388,18 @@ static mca_btl_base_module_t **mca_btl_ofi_component_init(int *num_btl_modules,
 no_hmem:
 #endif
 
+    hints.fabric_attr->fabric = opal_common_ofi.fabric;
+    hints.domain_attr->domain = opal_common_ofi.domain;
+
     /* Do the query. The earliest version that supports FI_HMEM hints is 1.9.
      * The earliest version the explictly allow provider to call CUDA API is 1.18  */
     rc = fi_getinfo(FI_VERSION(1, 18), NULL, NULL, 0, &hints, &info_list);
+    if (FI_ENODATA == -rc && (hints.fabric_attr->fabric || hints.domain_attr->domain)) {
+        /* Retry without fabric and domain */
+        hints.fabric_attr->fabric = NULL;
+        hints.domain_attr->domain = NULL;
+        rc = fi_getinfo(FI_VERSION(1, 18), NULL, NULL, 0, &hints, &info_list);
+    }
     if (FI_ENOSYS == -rc) {
         rc = fi_getinfo(FI_VERSION(1, 9), NULL, NULL, 0, &hints, &info_list);
     }
@@ -431,38 +456,131 @@ no_hmem:
 
     info = info_list;
 
-    while (info) {
-        rc = validate_info(info, required_caps, include_list, exclude_list);
-        if (OPAL_SUCCESS == rc) {
-            /* Device passed sanity check, let's make a module.
-             *
-             * The initial fi_getinfo() call will return a list of providers
-             * available for this process. once a provider is selected from the
-             * list, we will cycle through the remaining list to identify NICs
-             * serviced by this provider, and try to pick one on the same NUMA
-             * node as this process. If there are no NICs on the same NUMA node,
-             * we pick one in a manner which allows all ranks to make balanced
-             * use of available NICs on the system.
-             *
-             * Most providers give a separate fi_info object for each NIC,
-             * however some may have multiple info objects with different
-             * attributes for the same NIC. The initial provider attributes
-             * are used to ensure that all NICs we return provide the same
-             * capabilities as the initial one.
-             */
-            selected_info = opal_common_ofi_select_provider(info, &opal_process_info);
-            rc = mca_btl_ofi_init_device(selected_info);
-            if (OPAL_SUCCESS == rc) {
-                info = selected_info;
+    /* Count unique NIC domains for the selected provider to determine how many
+     * modules this process should create. This avoids creating resources that
+     * will never be used. We match by both provider name and domain name to
+     * avoid double-counting entries that share a physical NIC but differ in
+     * provider variant (e.g., efa vs efa-direct) or attributes. */
+    int num_nics = 0;
+    const char *first_prov = NULL;
+    if (resource_count > 0) {
+        unique_domains = (const char **) calloc(resource_count, sizeof(const char *));
+    }
+    {
+        struct fi_info *tmp = info_list;
+        while (tmp && NULL != unique_domains) {
+            if (OPAL_SUCCESS == validate_info(tmp, required_caps, include_list, exclude_list)) {
+                /* validate_info() succeeded, so it already dereferenced both
+                 * fabric_attr and domain_attr; they are guaranteed non-NULL. */
+                const char *p = tmp->fabric_attr->prov_name;
+                const char *d = tmp->domain_attr->name;
+                if (NULL == first_prov) first_prov = p;
+                if (NULL != first_prov && NULL != p && 0 == strcmp(first_prov, p) && NULL != d) {
+                    /* Only count unique domain names */
+                    bool dup = false;
+                    for (int i = 0; i < num_nics; i++) {
+                        if (0 == strcmp(unique_domains[i], d)) { dup = true; break; }
+                    }
+                    if (!dup) {
+                        unique_domains[num_nics] = d;
+                        num_nics++;
+                    }
+                }
+            }
+            tmp = tmp->next;
+        }
+    }
+    /* Sort the unique domain names so the list order is deterministic and
+     * identical on every process regardless of how the provider ordered
+     * its fi_getinfo() results. */
+    if (1 < num_nics) {
+        qsort(unique_domains, num_nics, sizeof(unique_domains[0]),
+              domain_name_compare);
+    }
+
+    /* Distribute NICs evenly across local processes */
+    int num_local_procs = (int)(opal_process_info.num_local_peers + 1);
+    int modules_per_proc = (num_nics > num_local_procs) ? (num_nics / num_local_procs) : 1;
+
+    /* Each local process takes a disjoint, contiguous slice of the sorted
+     * unique NIC (domain) list so that local processes do not collapse
+     * onto the same NICs. The list order is identical on all processes on
+     * a node, so slices are disjoint whenever there are at least as many
+     * NICs as local processes. */
+    int slice_start = 0;
+    if (0 < num_nics) {
+        slice_start = ((int) opal_process_info.my_local_rank * modules_per_proc) % num_nics;
+    }
+
+    /* Allocate the modules array dynamically based on actual need */
+    mca_btl_ofi_component.modules = (mca_btl_ofi_module_t **)
+        calloc(modules_per_proc, sizeof(mca_btl_ofi_module_t *));
+    if (NULL == mca_btl_ofi_component.modules) {
+        goto out;
+    }
+    mca_btl_ofi_component.modules_allocated = modules_per_proc;
+
+    /* Create one module per NIC (domain) in this process' slice of the
+     * unique-domain list. Pin to a single provider (the first valid one)
+     * so all modules share one address format. */
+    for (int mi = 0; mi < modules_per_proc && 0 < num_nics; mi++) {
+        const char *want = unique_domains[(slice_start + mi) % num_nics];
+        for (info = info_list; NULL != info; info = info->next) {
+            if (OPAL_SUCCESS != validate_info(info, required_caps, include_list, exclude_list)) {
+                continue;
+            }
+            /* validate_info() succeeded, so it already dereferenced both
+             * fabric_attr and domain_attr; they are guaranteed non-NULL. */
+            const char *prov = info->fabric_attr->prov_name;
+            const char *d = info->domain_attr->name;
+            if (NULL != first_prov && NULL != prov && NULL != d
+                && 0 == strcmp(first_prov, prov) && 0 == strcmp(want, d)) {
+                (void) mca_btl_ofi_init_device(info);
                 break;
             }
         }
-        info = info->next;
     }
 
-    if (NULL == info) {
+    if (0 == mca_btl_ofi_component.module_count) {
         BTL_VERBOSE(("No provider is selected"));
         goto out;
+    }
+
+    /* Publish all module endpoint names in a single modex blob so peers can
+     * pair modules by index. Layout: uint32 nmodules, then per module:
+     * uint32 namelen, namelen bytes. */
+    {
+        size_t total = sizeof(uint32_t);
+        for (int mi = 0; mi < mca_btl_ofi_component.module_count; mi++) {
+            total += sizeof(uint32_t) + mca_btl_ofi_component.modules[mi]->ep_namelen;
+        }
+        uint8_t *blob = (uint8_t *) malloc(total);
+        if (NULL == blob) {
+            BTL_ERROR(("failed to allocate modex blob"));
+            goto out;
+        }
+        uint8_t *p = blob;
+        uint32_t nm = (uint32_t) mca_btl_ofi_component.module_count;
+        memcpy(p, &nm, sizeof(uint32_t));
+        p += sizeof(uint32_t);
+        for (int mi = 0; mi < mca_btl_ofi_component.module_count; mi++) {
+            uint32_t nl = (uint32_t) mca_btl_ofi_component.modules[mi]->ep_namelen;
+            memcpy(p, &nl, sizeof(uint32_t));
+            p += sizeof(uint32_t);
+            memcpy(p, mca_btl_ofi_component.modules[mi]->ep_name, nl);
+            p += nl;
+        }
+        OPAL_MODEX_SEND(rc, PMIX_GLOBAL, &mca_btl_ofi_component.super.btl_version, blob, total);
+        free(blob);
+        if (OPAL_SUCCESS != rc) {
+            BTL_ERROR(("modex send failed"));
+            goto out;
+        }
+        /* ep_name copies no longer needed after packing into blob */
+        for (int mi = 0; mi < mca_btl_ofi_component.module_count; mi++) {
+            free(mca_btl_ofi_component.modules[mi]->ep_name);
+            mca_btl_ofi_component.modules[mi]->ep_name = NULL;
+        }
     }
 
     /* pass module array back to caller */
@@ -480,6 +598,21 @@ no_hmem:
     *num_btl_modules = mca_btl_ofi_component.module_count;
 
 out:
+    if (NULL == base_modules) {
+        /* Initialization failed after some modules may already have been
+         * created: finalize them so we do not leak libfabric resources. */
+        for (int mi = 0; mi < mca_btl_ofi_component.module_count; mi++) {
+            if (NULL != mca_btl_ofi_component.modules[mi]) {
+                (void) mca_btl_ofi_finalize(
+                    (mca_btl_base_module_t *) mca_btl_ofi_component.modules[mi]);
+            }
+        }
+        mca_btl_ofi_component.module_count = 0;
+        free(mca_btl_ofi_component.modules);
+        mca_btl_ofi_component.modules = NULL;
+        mca_btl_ofi_component.modules_allocated = 0;
+    }
+    free(unique_domains);
     if (include_list) {
         opal_argv_free(include_list);
     }
@@ -500,7 +633,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
     size_t namelen;
     size_t num_contexts_to_create;
 
-    char *linux_device_name;
+    char *domain_name = NULL;
     void *ep_name = NULL;
 
     struct fi_info *ofi_info;
@@ -548,21 +681,25 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
                      fi_strerror(-rc)));
     }
 
-    linux_device_name = info->domain_attr->name;
+    domain_name = strdup(info->domain_attr->name);
+    if (NULL == domain_name) {
+        BTL_ERROR(("failed to duplicate domain name"));
+        goto fail;
+    }
     BTL_VERBOSE(
-        ("initializing dev:%s provider:%s", linux_device_name, info->fabric_attr->prov_name));
+        ("initializing dev:%s provider:%s", domain_name, info->fabric_attr->prov_name));
 
     /* fabric */
-    rc = fi_fabric(ofi_info->fabric_attr, &fabric, NULL);
+    rc = opal_common_ofi_fi_fabric(ofi_info->fabric_attr, &fabric);
     if (0 != rc) {
-        BTL_VERBOSE(("%s failed fi_fabric with err=%s", linux_device_name, fi_strerror(-rc)));
+        BTL_VERBOSE(("%s failed fi_fabric with err=%s", domain_name, fi_strerror(-rc)));
         goto fail;
     }
 
     /* domain */
-    rc = fi_domain(fabric, ofi_info, &domain, NULL);
+    rc = opal_common_ofi_fi_domain(fabric, ofi_info, &domain);
     if (0 != rc) {
-        BTL_VERBOSE(("%s failed fi_domain with err=%s", linux_device_name, fi_strerror(-rc)));
+        BTL_VERBOSE(("%s failed fi_domain with err=%s", domain_name, fi_strerror(-rc)));
         goto fail;
     }
 
@@ -575,7 +712,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
     av_attr.type = FI_AV_MAP;
     rc = fi_av_open(domain, &av_attr, &av, NULL);
     if (0 != rc) {
-        BTL_VERBOSE(("%s failed fi_av_open with err=%s", linux_device_name, fi_strerror(-rc)));
+        BTL_VERBOSE(("%s failed fi_av_open with err=%s", domain_name, fi_strerror(-rc)));
         goto fail;
     }
 
@@ -600,7 +737,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
         rc = fi_scalable_ep(domain, ofi_info, &ep, NULL);
         if (0 != rc) {
             BTL_VERBOSE(
-                ("%s failed fi_scalable_ep with err=%s", linux_device_name, fi_strerror(-rc)));
+                ("%s failed fi_scalable_ep with err=%s", domain_name, fi_strerror(-rc)));
             goto fail;
         }
 
@@ -609,7 +746,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
 
         /* create contexts */
         module->contexts = mca_btl_ofi_context_alloc_scalable(ofi_info, domain, ep, av,
-                                                              num_contexts_to_create);
+                                                              module, num_contexts_to_create);
 
     } else {
         /* warn the user if they want more than 1 context */
@@ -623,7 +760,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
 
         rc = fi_endpoint(domain, ofi_info, &ep, NULL);
         if (0 != rc) {
-            BTL_VERBOSE(("%s failed fi_endpoint with err=%s", linux_device_name, fi_strerror(-rc)));
+            BTL_VERBOSE(("%s failed fi_endpoint with err=%s", domain_name, fi_strerror(-rc)));
             goto fail;
         }
 
@@ -631,7 +768,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
         module->is_scalable_ep = false;
 
         /* create contexts */
-        module->contexts = mca_btl_ofi_context_alloc_normal(ofi_info, domain, ep, av);
+        module->contexts = mca_btl_ofi_context_alloc_normal(ofi_info, domain, ep, av, module);
     }
 
     if (NULL == module->contexts) {
@@ -642,7 +779,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
     /* enable the endpoint for using */
     rc = fi_enable(ep);
     if (0 != rc) {
-        BTL_VERBOSE(("%s failed fi_enable with err=%s", linux_device_name, fi_strerror(-rc)));
+        BTL_VERBOSE(("%s failed fi_enable with err=%s", domain_name, fi_strerror(-rc)));
         goto fail;
     }
 
@@ -653,11 +790,10 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
     module->domain = domain;
     module->av = av;
     module->ofi_endpoint = ep;
-    module->linux_device_name = linux_device_name;
+    module->domain_name = domain_name;
     module->outstanding_rdma = 0;
     module->use_virt_addr = false;
     module->use_fi_mr_bind = false;
-    module->bypass_cache = false;
 
 #if defined(FI_HMEM)
     if (ofi_info->caps & FI_HMEM) {
@@ -672,13 +808,6 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
 
     if (ofi_info->domain_attr->mr_mode & FI_MR_ENDPOINT) {
         module->use_fi_mr_bind = true;
-    }
-
-    /* Currently there is no API to query whether the libfabric provider
-     * uses an underlying registration cache. For now, just check for known
-     * providers that use registration caching. */
-    if (!strncasecmp(info->fabric_attr->prov_name, "efa", 3)) {
-        module->bypass_cache = true;
     }
 
     /* create endpoint list */
@@ -696,7 +825,7 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
                                      &ep_name,
                                      &namelen);
     if (OPAL_SUCCESS != rc) {
-        BTL_VERBOSE(("%s failed opal_common_ofi_fi_getname  with err=%d", linux_device_name, rc));
+        BTL_VERBOSE(("%s failed opal_common_ofi_fi_getname  with err=%d", domain_name, rc));
         goto fail;
     }
 
@@ -712,12 +841,12 @@ static int mca_btl_ofi_init_device(struct fi_info *info)
         }
     }
 
-    /* post our endpoint name so peer can use it to connect to us */
-    OPAL_MODEX_SEND(rc, PMIX_GLOBAL, &mca_btl_ofi_component.super.btl_version, ep_name, namelen);
-    mca_btl_ofi_component.namelen = namelen;
-    free(ep_name);
+    /* Save endpoint name on the module; modex send happens after all modules are created */
+    module->ep_name = ep_name;
+    module->ep_namelen = namelen;
 
     /* add this module to the list */
+    module->module_index = *module_count;
     mca_btl_ofi_component.modules[(*module_count)++] = module;
 
     return OPAL_SUCCESS;
@@ -751,12 +880,13 @@ fail:
     }
 
     if (NULL != domain) {
-        fi_close(&domain->fid);
+        opal_common_ofi_domain_release(domain);
     }
 
     if (NULL != fabric) {
-        fi_close(&fabric->fid);
+        opal_common_ofi_fabric_release(fabric);
     }
+    free(domain_name);
     free(module);
 
     if (NULL != ep_name) {

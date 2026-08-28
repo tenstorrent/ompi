@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_GRAPH_GET = ompi_graph_get_f
 #pragma weak pmpi_graph_get = ompi_graph_get_f
 #pragma weak pmpi_graph_get_ = ompi_graph_get_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GRAPH_GET,
                            pmpi_graph_get,
                            pmpi_graph_get_,
                            pmpi_graph_get__,
-                           pompi_graph_get_f,
+                           ompi_graph_get_f,
                            (MPI_Fint *comm, MPI_Fint *maxindex, MPI_Fint *maxedges, MPI_Fint *indx, MPI_Fint *edges, MPI_Fint *ierr),
                            (comm, maxindex, maxedges, indx, edges, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_GRAPH_GET = ompi_graph_get_f
 #pragma weak mpi_graph_get = ompi_graph_get_f
 #pragma weak mpi_graph_get_ = ompi_graph_get_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GRAPH_GET,
 #pragma weak MPI_Graph_get_f = ompi_graph_get_f
 #pragma weak MPI_Graph_get_f08 = ompi_graph_get_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_GRAPH_GET,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_GRAPH_GET,
                            mpi_graph_get,
                            mpi_graph_get_,
                            mpi_graph_get__,
                            ompi_graph_get_f,
                            (MPI_Fint *comm, MPI_Fint *maxindex, MPI_Fint *maxedges, MPI_Fint *indx, MPI_Fint *edges, MPI_Fint *ierr),
                            (comm, maxindex, maxedges, indx, edges, ierr) )
-#else
-#define ompi_graph_get_f pompi_graph_get_f
-#endif
 #endif
 
 

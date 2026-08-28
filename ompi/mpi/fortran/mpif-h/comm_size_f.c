@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_SIZE = ompi_comm_size_f
 #pragma weak pmpi_comm_size = ompi_comm_size_f
 #pragma weak pmpi_comm_size_ = ompi_comm_size_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_SIZE,
                            pmpi_comm_size,
                            pmpi_comm_size_,
                            pmpi_comm_size__,
-                           pompi_comm_size_f,
+                           ompi_comm_size_f,
                            (MPI_Fint *comm, MPI_Fint *size, MPI_Fint *ierr),
                            (comm, size, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_SIZE = ompi_comm_size_f
 #pragma weak mpi_comm_size = ompi_comm_size_f
 #pragma weak mpi_comm_size_ = ompi_comm_size_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_SIZE,
 #pragma weak MPI_Comm_size_f = ompi_comm_size_f
 #pragma weak MPI_Comm_size_f08 = ompi_comm_size_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_SIZE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_SIZE,
                            mpi_comm_size,
                            mpi_comm_size_,
                            mpi_comm_size__,
                            ompi_comm_size_f,
                            (MPI_Fint *comm, MPI_Fint *size, MPI_Fint *ierr),
                            (comm, size, ierr) )
-#else
-#define ompi_comm_size_f pompi_comm_size_f
-#endif
 #endif
 
 

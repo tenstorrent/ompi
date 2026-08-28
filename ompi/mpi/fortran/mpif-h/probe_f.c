@@ -28,7 +28,7 @@
 #include "ompi/communicator/communicator.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_PROBE = ompi_probe_f
 #pragma weak pmpi_probe = ompi_probe_f
 #pragma weak pmpi_probe_ = ompi_probe_f
@@ -41,13 +41,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_PROBE,
                            pmpi_probe,
                            pmpi_probe_,
                            pmpi_probe__,
-                           pompi_probe_f,
+                           ompi_probe_f,
                            (MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr),
                            (source, tag, comm, status, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_PROBE = ompi_probe_f
 #pragma weak mpi_probe = ompi_probe_f
 #pragma weak mpi_probe_ = ompi_probe_f
@@ -56,17 +56,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_PROBE,
 #pragma weak MPI_Probe_f = ompi_probe_f
 #pragma weak MPI_Probe_f08 = ompi_probe_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_PROBE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_PROBE,
                            mpi_probe,
                            mpi_probe_,
                            mpi_probe__,
                            ompi_probe_f,
                            (MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr),
                            (source, tag, comm, status, ierr) )
-#else
-#define ompi_probe_f pompi_probe_f
-#endif
 #endif
 
 

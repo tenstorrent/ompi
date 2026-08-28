@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_ADDRESS = ompi_address_f
 #pragma weak pmpi_address = ompi_address_f
 #pragma weak pmpi_address_ = ompi_address_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ADDRESS,
                            pmpi_address,
                            pmpi_address_,
                            pmpi_address__,
-                           pompi_address_f,
+                           ompi_address_f,
                            (char *location, MPI_Fint *address, MPI_Fint *ierr),
                            (location, address, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_ADDRESS = ompi_address_f
 #pragma weak mpi_address = ompi_address_f
 #pragma weak mpi_address_ = ompi_address_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ADDRESS,
 #pragma weak MPI_Address_f = ompi_address_f
 #pragma weak MPI_Address_f08 = ompi_address_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_ADDRESS,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_ADDRESS,
                            mpi_address,
                            mpi_address_,
                            mpi_address__,
                            ompi_address_f,
                            (char *location, MPI_Fint *address, MPI_Fint *ierr),
                            (location, address, ierr) )
-#else
-#define ompi_address_f pompi_address_f
-#endif
 #endif
 
 

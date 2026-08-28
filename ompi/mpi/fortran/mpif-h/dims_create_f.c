@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_DIMS_CREATE = ompi_dims_create_f
 #pragma weak pmpi_dims_create = ompi_dims_create_f
 #pragma weak pmpi_dims_create_ = ompi_dims_create_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_DIMS_CREATE,
                            pmpi_dims_create,
                            pmpi_dims_create_,
                            pmpi_dims_create__,
-                           pompi_dims_create_f,
+                           ompi_dims_create_f,
                            (MPI_Fint *nnodes, MPI_Fint *ndims, MPI_Fint *dims, MPI_Fint *ierr),
                            (nnodes, ndims, dims, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_DIMS_CREATE = ompi_dims_create_f
 #pragma weak mpi_dims_create = ompi_dims_create_f
 #pragma weak mpi_dims_create_ = ompi_dims_create_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_DIMS_CREATE,
 #pragma weak MPI_Dims_create_f = ompi_dims_create_f
 #pragma weak MPI_Dims_create_f08 = ompi_dims_create_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_DIMS_CREATE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_DIMS_CREATE,
                            mpi_dims_create,
                            mpi_dims_create_,
                            mpi_dims_create__,
                            ompi_dims_create_f,
                            (MPI_Fint *nnodes, MPI_Fint *ndims, MPI_Fint *dims, MPI_Fint *ierr),
                            (nnodes, ndims, dims, ierr) )
-#else
-#define ompi_dims_create_f pompi_dims_create_f
-#endif
 #endif
 
 

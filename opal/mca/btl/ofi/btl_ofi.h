@@ -13,8 +13,7 @@
  * Copyright (c) 2015-2018 Los Alamos National Security, LLC. All rights
  *                         reserved.
  * Copyright (c) 2018-2019 Intel, Inc.  All rights reserved.
- * Copyright (c) 2020      Amazon.com, Inc. or its affiliates.
- *                         All Rights reserved.
+ * Copyright (c) 2020-2025 Amazon.com, Inc. or its affiliates.  All Rights reserved.
  * Copyright (c) 2022      Triad National Security, LLC. All rights
  *                         reserved.
  * $COPYRIGHT$
@@ -52,7 +51,6 @@
 #include <rdma/fi_rma.h>
 
 BEGIN_C_DECLS
-#define MCA_BTL_OFI_MAX_MODULES  16
 #define MCA_BTL_OFI_NUM_CQE_READ 64
 
 #define MCA_BTL_OFI_DEFAULT_RD_NUM             10
@@ -81,7 +79,9 @@ enum mca_btl_ofi_hdr_type {
     MCA_BTL_OFI_TYPE_TOTAL
 };
 
+struct mca_btl_ofi_module_t;
 struct mca_btl_ofi_context_t {
+    struct mca_btl_ofi_module_t *btl;
     int32_t context_id;
 
     /* transmit context */
@@ -120,7 +120,10 @@ struct mca_btl_ofi_module_t {
     int num_contexts;
     mca_btl_ofi_context_t *contexts;
 
-    char *linux_device_name;
+    char *domain_name;
+    int module_index;
+    void *ep_name;
+    size_t ep_namelen;
 
     /** whether the module has been fully initialized or not */
     bool initialized;
@@ -140,9 +143,8 @@ struct mca_btl_ofi_module_t {
 
     /** registration cache */
     mca_rcache_base_module_t *rcache;
-    /* If the underlying OFI provider has its own cache, we want to bypass
-     * rcache registration */
-    bool bypass_cache;
+
+    mca_btl_base_module_error_cb_fn_t ofi_error_cb;
 };
 typedef struct mca_btl_ofi_module_t mca_btl_ofi_module_t;
 
@@ -172,7 +174,8 @@ struct mca_btl_ofi_component_t {
     bool disable_hmem;
 
     /** All BTL OFI modules (1 per tl) */
-    mca_btl_ofi_module_t *modules[MCA_BTL_OFI_MAX_MODULES];
+    mca_btl_ofi_module_t **modules;
+    int modules_allocated;
 };
 typedef struct mca_btl_ofi_component_t mca_btl_ofi_component_t;
 

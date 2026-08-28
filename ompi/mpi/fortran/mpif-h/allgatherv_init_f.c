@@ -12,6 +12,8 @@
  * Copyright (c) 2011-2012 Cisco Systems, Inc.  All rights reserved.
  * Copyright (c) 2015-2021 Research Organization for Information Science
  *                         and Technology (RIST).  All rights reserved.
+ * Copyright (c) 2025      Triad National Security, LLC. All rights
+ *                         reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -26,7 +28,7 @@
 #include "ompi/mca/coll/base/coll_base_util.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_ALLGATHERV_INIT = ompi_allgatherv_init_f
 #pragma weak pmpi_allgatherv_init = ompi_allgatherv_init_f
 #pragma weak pmpi_allgatherv_init_ = ompi_allgatherv_init_f
@@ -39,13 +41,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ALLGATHERV_INIT,
                             pmpi_allgatherv_init,
                             pmpi_allgatherv_init_,
                             pmpi_allgatherv_init__,
-                            pompi_allgatherv_init_f,
+                            ompi_allgatherv_init_f,
                             (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *info, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, comm, info, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_ALLGATHERV_INIT = ompi_allgatherv_init_f
 #pragma weak mpi_allgatherv_init = ompi_allgatherv_init_f
 #pragma weak mpi_allgatherv_init_ = ompi_allgatherv_init_f
@@ -54,17 +56,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ALLGATHERV_INIT,
 #pragma weak MPI_Allgatherv_init_f = ompi_allgatherv_init_f
 #pragma weak MPI_Allgatherv_init_f08 = ompi_allgatherv_init_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_ALLGATHERV_INIT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_ALLGATHERV_INIT,
                             mpi_allgatherv_init,
                             mpi_allgatherv_init_,
                             mpi_allgatherv_init__,
                             ompi_allgatherv_init_f,
                             (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcounts, MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *info, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, comm, info, request, ierr) )
-#else
-#define ompi_allgatherv_init_f pompi_allgatherv_init_f
-#endif
 #endif
 
 
@@ -77,7 +75,7 @@ void ompi_allgatherv_init_f(char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendty
     MPI_Datatype c_sendtype, c_recvtype;
     MPI_Request c_request;
     MPI_Info c_info;
-    int size, idx = 0, ierr_c;
+    int size, ierr_c;
     OMPI_ARRAY_NAME_DECL(recvcounts);
     OMPI_ARRAY_NAME_DECL(displs);
 
@@ -105,12 +103,11 @@ void ompi_allgatherv_init_f(char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendty
     if (NULL != ierr) *ierr = OMPI_INT_2_FINT(ierr_c);
     if (MPI_SUCCESS == ierr_c) {
         *request = PMPI_Request_c2f(c_request);
-        ompi_coll_base_nbc_request_t* nb_request = (ompi_coll_base_nbc_request_t*)c_request;
-        if (recvcounts != OMPI_ARRAY_NAME_CONVERT(recvcounts)) {
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(recvcounts);
-            nb_request->data.release_arrays[idx++] = OMPI_ARRAY_NAME_CONVERT(displs);
+        if ((void *)recvcounts != (void *)OMPI_ARRAY_NAME_CONVERT(recvcounts)) {
+            ompi_coll_base_append_array_to_release(c_request,OMPI_ARRAY_NAME_CONVERT(recvcounts));
+            ompi_coll_base_append_array_to_release(c_request,OMPI_ARRAY_NAME_CONVERT(displs));
+            ompi_coll_base_add_release_arrays_cb(c_request);
         }
-        nb_request->data.release_arrays[idx]   = NULL;
      } else {
         OMPI_ARRAY_FINT_2_INT_CLEANUP(recvcounts);
         OMPI_ARRAY_FINT_2_INT_CLEANUP(displs);

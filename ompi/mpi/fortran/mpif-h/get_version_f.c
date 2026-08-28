@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_GET_VERSION = ompi_get_version_f
 #pragma weak pmpi_get_version = ompi_get_version_f
 #pragma weak pmpi_get_version_ = ompi_get_version_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GET_VERSION,
                            pmpi_get_version,
                            pmpi_get_version_,
                            pmpi_get_version__,
-                           pompi_get_version_f,
+                           ompi_get_version_f,
                            (MPI_Fint *version, MPI_Fint *subversion, MPI_Fint *ierr),
                            (version, subversion, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_GET_VERSION = ompi_get_version_f
 #pragma weak mpi_get_version = ompi_get_version_f
 #pragma weak mpi_get_version_ = ompi_get_version_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GET_VERSION,
 #pragma weak MPI_Get_version_f = ompi_get_version_f
 #pragma weak MPI_Get_version_f08 = ompi_get_version_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_GET_VERSION,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_GET_VERSION,
                            mpi_get_version,
                            mpi_get_version_,
                            mpi_get_version__,
                            ompi_get_version_f,
                            (MPI_Fint *version, MPI_Fint *subversion, MPI_Fint *ierr),
                            (version, subversion, ierr) )
-#else
-#define ompi_get_version_f pompi_get_version_f
-#endif
 #endif
 
 

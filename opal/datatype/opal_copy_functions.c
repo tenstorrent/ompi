@@ -8,6 +8,7 @@
  *                         and Technology (RIST).  All rights reserved.
  * Copyright (c) 2015      Cisco Systems, Inc.  All rights reserved.
  * Copyright (c) 2018      FUJITSU LIMITED.  All rights reserved.
+ * Copyright (c) 2026      NVIDIA Corporation.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -22,8 +23,8 @@
 #include "opal/datatype/opal_convertor.h"
 #include "opal/datatype/opal_convertor_internal.h"
 #include "opal/datatype/opal_datatype.h"
-#include "opal/datatype/opal_datatype_checksum.h"
-#include "opal/datatype/opal_datatype_internal.h"
+#include "opal/datatype/opal_datatype_constructors.h"
+#include "opal/datatype/opal_datatype_memcpy.h"
 
 /*
  * This function is used to copy data from one buffer to another.  The assumption
@@ -39,41 +40,67 @@
  *
  * Return value: Number of elements of type TYPE copied
  */
-#define COPY_TYPE(TYPENAME, TYPE, COUNT)                                                        \
-    static int copy_##TYPENAME(opal_convertor_t *pConvertor, size_t count, char *from,          \
-                               size_t from_len, ptrdiff_t from_extent, char *to, size_t to_len, \
-                               ptrdiff_t to_extent, ptrdiff_t *advance)                         \
-    {                                                                                           \
-        size_t remote_TYPE_size = sizeof(TYPE) * (COUNT); /* TODO */                            \
-        size_t local_TYPE_size = (COUNT) * sizeof(TYPE);                                        \
-                                                                                                \
-        /* make sure the remote buffer is large enough to hold the data */                      \
-        if ((remote_TYPE_size * count) > from_len) {                                            \
-            count = from_len / remote_TYPE_size;                                                \
-            if ((count * remote_TYPE_size) != from_len) {                                       \
-                DUMP("oops should I keep this data somewhere (excedent %d bytes)?\n",           \
-                     from_len - (count * remote_TYPE_size));                                    \
-            }                                                                                   \
-            DUMP("correct: copy %s count %d from buffer %p with length %d to %p space %d\n",    \
-                 #TYPE, count, from, from_len, to, to_len);                                     \
-        } else                                                                                  \
-            DUMP("         copy %s count %d from buffer %p with length %d to %p space %d\n",    \
-                 #TYPE, count, from, from_len, to, to_len);                                     \
-                                                                                                \
-        if ((from_extent == (ptrdiff_t) local_TYPE_size)                                        \
-            && (to_extent == (ptrdiff_t) remote_TYPE_size)) {                                   \
-            /* copy of contiguous data at both source and destination */                         \
-            MEMCPY(to, from, count *local_TYPE_size);                                           \
-        } else {                                                                                \
-            /* source or destination are non-contiguous */                                       \
-            for (size_t i = 0; i < count; i++) {                                                \
-                MEMCPY(to, from, local_TYPE_size);                                              \
-                to += to_extent;                                                                \
-                from += from_extent;                                                            \
-            }                                                                                   \
-        }                                                                                       \
-        *advance = count * from_extent;                                                         \
-        return count;                                                                           \
+#define COPY_TYPE(TYPENAME, TYPE, COUNT)                                                       \
+    static size_t copy_##TYPENAME(opal_convertor_t *pConvertor, size_t count,                  \
+                                  size_t blocklen, size_t elem_count, char **from,             \
+                                  size_t from_len, ptrdiff_t from_extent, char **to,           \
+                                  size_t to_len, ptrdiff_t to_extent)                          \
+    {                                                                                          \
+        const size_t remote_TYPE_size = sizeof(TYPE) * (COUNT);                                \
+        const size_t local_TYPE_size = sizeof(TYPE) * (COUNT);                                 \
+        size_t copied = count, block_count = 0, leftover;                                      \
+        char *_from = *from, *_to = *to;                                                       \
+                                                                                               \
+        /* make sure the remote buffer is large enough to hold the data */                     \
+        if ((remote_TYPE_size * copied) > from_len) {                                          \
+            copied = from_len / remote_TYPE_size;                                              \
+            if ((copied * remote_TYPE_size) != from_len) {                                     \
+                DUMP("oops should I keep this data somewhere (excess %" PRIsize_t              \
+                     " bytes)?\n",                                                             \
+                     from_len - (copied * remote_TYPE_size));                                  \
+            }                                                                                  \
+            DUMP("correct: copy %s count %" PRIsize_t " blocklen %" PRIsize_t                  \
+                 " from buffer %p with length %" PRIsize_t " to %p space %" PRIsize_t "\n",    \
+                 #TYPE, copied, blocklen, (void *) _from, from_len, (void *) _to, to_len);     \
+        } else {                                                                               \
+            DUMP("         copy %s count %" PRIsize_t " blocklen %" PRIsize_t                  \
+                 " from buffer %p with length %" PRIsize_t " to %p space %" PRIsize_t "\n",    \
+                 #TYPE, copied, blocklen, (void *) _from, from_len, (void *) _to, to_len);     \
+        }                                                                                      \
+                                                                                               \
+        if (0 == copied) {                                                                     \
+            return 0;                                                                          \
+        }                                                                                      \
+                                                                                               \
+        if ((1 == blocklen) || ((1 < elem_count) && (blocklen <= copied))) {                   \
+            const size_t block_bytes = blocklen * local_TYPE_size;                             \
+            block_count = copied / blocklen;                                                   \
+                                                                                               \
+            if ((from_extent == (ptrdiff_t) block_bytes)                                       \
+                && (to_extent == (ptrdiff_t) block_bytes)) {                                   \
+                MEMCPY(_to, _from, block_count * block_bytes);                                 \
+                _to += block_count * block_bytes;                                              \
+                _from += block_count * block_bytes;                                            \
+            } else {                                                                           \
+                for (size_t i = 0; i < block_count; i++) {                                     \
+                    MEMCPY(_to, _from, block_bytes);                                           \
+                    _to += to_extent;                                                          \
+                    _from += from_extent;                                                      \
+                }                                                                              \
+            }                                                                                  \
+        }                                                                                      \
+                                                                                               \
+        leftover = copied - block_count * blocklen;                                            \
+        if (0 != leftover) {                                                                   \
+            const size_t leftover_bytes = leftover * local_TYPE_size;                          \
+            MEMCPY(_to, _from, leftover_bytes);                                                \
+            _to += leftover_bytes;                                                             \
+            _from += leftover_bytes;                                                           \
+        }                                                                                      \
+                                                                                               \
+        *from = _from;                                                                         \
+        *to = _to;                                                                             \
+        return copied;                                                                         \
     }
 
 /*
@@ -90,39 +117,66 @@
  *
  * Return value: Number of elements of type TYPE copied
  */
-#define COPY_CONTIGUOUS_BYTES(TYPENAME, COUNT)                                                  \
-    static size_t copy_##TYPENAME##_##COUNT(opal_convertor_t *pConvertor, size_t count,         \
-                                            char *from, size_t from_len, ptrdiff_t from_extent, \
-                                            char *to, size_t to_len, ptrdiff_t to_extent,       \
-                                            ptrdiff_t *advance)                                 \
-    {                                                                                           \
-        size_t remote_TYPE_size = (size_t)(COUNT); /* TODO */                                   \
-        size_t local_TYPE_size = (size_t)(COUNT);                                               \
-                                                                                                \
-        if ((remote_TYPE_size * count) > from_len) {                                            \
-            count = from_len / remote_TYPE_size;                                                \
-            if ((count * remote_TYPE_size) != from_len) {                                       \
-                DUMP("oops should I keep this data somewhere (excedent %d bytes)?\n",           \
-                     from_len - (count * remote_TYPE_size));                                    \
-            }                                                                                   \
-            DUMP("correct: copy %s count %d from buffer %p with length %d to %p space %d\n",    \
-                 #TYPENAME, count, from, from_len, to, to_len);                                 \
-        } else                                                                                  \
-            DUMP("         copy %s count %d from buffer %p with length %d to %p space %d\n",    \
-                 #TYPENAME, count, from, from_len, to, to_len);                                 \
-                                                                                                \
-        if ((from_extent == (ptrdiff_t) local_TYPE_size)                                        \
-            && (to_extent == (ptrdiff_t) remote_TYPE_size)) {                                   \
-            MEMCPY(to, from, count *local_TYPE_size);                                           \
-        } else {                                                                                \
-            for (size_t i = 0; i < count; i++) {                                                \
-                MEMCPY(to, from, local_TYPE_size);                                              \
-                to += to_extent;                                                                \
-                from += from_extent;                                                            \
-            }                                                                                   \
-        }                                                                                       \
-        *advance = count * from_extent;                                                         \
-        return count;                                                                           \
+#define COPY_CONTIGUOUS_BYTES(TYPENAME, COUNT)                                                 \
+    static size_t copy_##TYPENAME##_##COUNT(opal_convertor_t *pConvertor, size_t count,        \
+                                            size_t blocklen, size_t elem_count, char **from,   \
+                                            size_t from_len, ptrdiff_t from_extent, char **to, \
+                                            size_t to_len, ptrdiff_t to_extent)                \
+    {                                                                                          \
+        const size_t remote_TYPE_size = (size_t) (COUNT);                                      \
+        const size_t local_TYPE_size = (size_t) (COUNT);                                       \
+        size_t copied = count, block_count = 0, leftover;                                      \
+        char *_from = *from, *_to = *to;                                                       \
+                                                                                               \
+        if ((remote_TYPE_size * copied) > from_len) {                                          \
+            copied = from_len / remote_TYPE_size;                                              \
+            if ((copied * remote_TYPE_size) != from_len) {                                     \
+                DUMP("oops should I keep this data somewhere (excess %" PRIsize_t              \
+                     " bytes)?\n",                                                             \
+                     from_len - (copied * remote_TYPE_size));                                  \
+            }                                                                                  \
+            DUMP("correct: copy %s count %" PRIsize_t " blocklen %" PRIsize_t                  \
+                 " from buffer %p with length %" PRIsize_t " to %p space %" PRIsize_t "\n",    \
+                 #TYPENAME, copied, blocklen, (void *) _from, from_len, (void *) _to, to_len); \
+        } else {                                                                               \
+            DUMP("         copy %s count %" PRIsize_t " blocklen %" PRIsize_t                  \
+                 " from buffer %p with length %" PRIsize_t " to %p space %" PRIsize_t "\n",    \
+                 #TYPENAME, copied, blocklen, (void *) _from, from_len, (void *) _to, to_len); \
+        }                                                                                      \
+                                                                                               \
+        if (0 == copied) {                                                                     \
+            return 0;                                                                          \
+        }                                                                                      \
+                                                                                               \
+        if ((1 == blocklen) || ((1 < elem_count) && (blocklen <= copied))) {                   \
+            const size_t block_bytes = blocklen * local_TYPE_size;                             \
+            block_count = copied / blocklen;                                                   \
+                                                                                               \
+            if ((from_extent == (ptrdiff_t) block_bytes)                                       \
+                && (to_extent == (ptrdiff_t) block_bytes)) {                                   \
+                MEMCPY(_to, _from, block_count * block_bytes);                                 \
+                _to += block_count * block_bytes;                                              \
+                _from += block_count * block_bytes;                                            \
+            } else {                                                                           \
+                for (size_t i = 0; i < block_count; i++) {                                     \
+                    MEMCPY(_to, _from, block_bytes);                                           \
+                    _to += to_extent;                                                          \
+                    _from += from_extent;                                                      \
+                }                                                                              \
+            }                                                                                  \
+        }                                                                                      \
+                                                                                               \
+        leftover = copied - block_count * blocklen;                                            \
+        if (0 != leftover) {                                                                   \
+            const size_t leftover_bytes = leftover * local_TYPE_size;                          \
+            MEMCPY(_to, _from, leftover_bytes);                                                \
+            _to += leftover_bytes;                                                             \
+            _from += leftover_bytes;                                                           \
+        }                                                                                      \
+                                                                                               \
+        *from = _from;                                                                         \
+        *to = _to;                                                                             \
+        return copied;                                                                         \
     }
 
 /* set up copy functions for the basic C MPI data types */
@@ -192,14 +246,14 @@ COPY_TYPE(float_8, opal_short_float_t, 1)
 #    error No basic type for copy function for opal_datatype_float8 found
 #endif
 
-#if defined(HAVE_SHORT_FLOAT) && SIZEOF_SHORT_FLOAT == 12
-COPY_TYPE(float_12, short float, 1)
-#elif SIZEOF_FLOAT == 12
-COPY_TYPE(float_12, float, 1)
-#elif SIZEOF_DOUBLE == 12
-COPY_TYPE(float_12, double, 1)
-#elif SIZEOF_LONG_DOUBLE == 12
+#if SIZEOF_LONG_DOUBLE == OPAL_SIZEOF_FLOAT12
 COPY_TYPE(float_12, long double, 1)
+#elif SIZEOF_DOUBLE == OPAL_SIZEOF_FLOAT12
+COPY_TYPE(float_12, double, 1)
+#elif SIZEOF_FLOAT == OPAL_SIZEOF_FLOAT12
+COPY_TYPE(float_12, float, 1)
+#elif defined(HAVE_SHORT_FLOAT) && SIZEOF_SHORT_FLOAT == OPAL_SIZEOF_FLOAT12
+COPY_TYPE(float_12, short float, 1)
 #elif defined(HAVE_OPAL_SHORT_FLOAT_T) && SIZEOF_OPAL_SHORT_FLOAT_T == 12
 COPY_TYPE(float_12, opal_short_float_t, 1)
 #else
@@ -207,7 +261,11 @@ COPY_TYPE(float_12, opal_short_float_t, 1)
 #    define copy_float_12 NULL
 #endif
 
-#if defined(HAVE_SHORT_FLOAT) && SIZEOF_SHORT_FLOAT == 16
+#if defined(HAVE__FLOAT128) && SIZEOF__FLOAT128 == 16
+COPY_TYPE(float_16, _Float128, 1)
+#elif defined(HAVE___FLOAT128) && SIZEOF___FLOAT128 == 16
+COPY_TYPE(float_16, __float128, 1)
+#elif defined(HAVE_SHORT_FLOAT) && SIZEOF_SHORT_FLOAT == 16
 COPY_TYPE(float_16, short float, 1)
 #elif SIZEOF_FLOAT == 16
 COPY_TYPE(float_16, float, 1)
@@ -236,6 +294,15 @@ COPY_TYPE(float_complex, float _Complex, 1)
 COPY_TYPE(double_complex, double _Complex, 1)
 
 COPY_TYPE(long_double_complex, long double _Complex, 1)
+
+#if defined(HAVE__FLOAT128) && defined(HAVE__FLOAT128__COMPLEX)
+COPY_TYPE(float128_complex, _Float128 _Complex, 1)
+#elif defined(HAVE___FLOAT128) && defined(HAVE___FLOAT128__COMPLEX)
+COPY_TYPE(float128_complex, __float128 _Complex, 1)
+#else
+/* #error No _Float128 _Complex support available */
+#    define copy_float128_complex NULL
+#endif
 
 #if SIZEOF__BOOL == SIZEOF_CHAR
 COPY_TYPE(bool, char, 1)
@@ -286,5 +353,6 @@ conversion_fct_t opal_datatype_copy_functions[OPAL_DATATYPE_MAX_PREDEFINED] = {
     [OPAL_DATATYPE_LONG]                =     (conversion_fct_t)copy_bytes_8,
     [OPAL_DATATYPE_UNSIGNED_LONG]       =     (conversion_fct_t)copy_bytes_8,
 #endif
+    [OPAL_DATATYPE_FLOAT128_COMPLEX]    =     (conversion_fct_t) copy_float128_complex,
     [OPAL_DATATYPE_UNAVAILABLE]         =     NULL,
 };

@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_FREE_KEYVAL = ompi_comm_free_keyval_f
 #pragma weak pmpi_comm_free_keyval = ompi_comm_free_keyval_f
 #pragma weak pmpi_comm_free_keyval_ = ompi_comm_free_keyval_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_FREE_KEYVAL,
                            pmpi_comm_free_keyval,
                            pmpi_comm_free_keyval_,
                            pmpi_comm_free_keyval__,
-                           pompi_comm_free_keyval_f,
+                           ompi_comm_free_keyval_f,
                            (MPI_Fint *comm_keyval, MPI_Fint *ierr),
                            (comm_keyval, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_FREE_KEYVAL = ompi_comm_free_keyval_f
 #pragma weak mpi_comm_free_keyval = ompi_comm_free_keyval_f
 #pragma weak mpi_comm_free_keyval_ = ompi_comm_free_keyval_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_FREE_KEYVAL,
 #pragma weak MPI_Comm_free_keyval_f = ompi_comm_free_keyval_f
 #pragma weak MPI_Comm_free_keyval_f08 = ompi_comm_free_keyval_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_FREE_KEYVAL,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_FREE_KEYVAL,
                            mpi_comm_free_keyval,
                            mpi_comm_free_keyval_,
                            mpi_comm_free_keyval__,
                            ompi_comm_free_keyval_f,
                            (MPI_Fint *comm_keyval, MPI_Fint *ierr),
                            (comm_keyval, ierr) )
-#else
-#define ompi_comm_free_keyval_f pompi_comm_free_keyval_f
-#endif
 #endif
 
 

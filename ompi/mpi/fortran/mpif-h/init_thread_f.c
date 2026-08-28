@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_INIT_THREAD = ompi_init_thread_f
 #pragma weak pmpi_init_thread = ompi_init_thread_f
 #pragma weak pmpi_init_thread_ = ompi_init_thread_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INIT_THREAD,
                            pmpi_init_thread,
                            pmpi_init_thread_,
                            pmpi_init_thread__,
-                           pompi_init_thread_f,
+                           ompi_init_thread_f,
                            (MPI_Fint *required, MPI_Fint *provided, MPI_Fint *ierr),
                            (required, provided, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_INIT_THREAD = ompi_init_thread_f
 #pragma weak mpi_init_thread = ompi_init_thread_f
 #pragma weak mpi_init_thread_ = ompi_init_thread_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INIT_THREAD,
 #pragma weak MPI_Init_thread_f = ompi_init_thread_f
 #pragma weak MPI_Init_thread_f08 = ompi_init_thread_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_INIT_THREAD,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_INIT_THREAD,
                            mpi_init_thread,
                            mpi_init_thread_,
                            mpi_init_thread__,
                            ompi_init_thread_f,
                            (MPI_Fint *required, MPI_Fint *provided, MPI_Fint *ierr),
                            (required, provided, ierr) )
-#else
-#define ompi_init_thread_f pompi_init_thread_f
-#endif
 #endif
 
 

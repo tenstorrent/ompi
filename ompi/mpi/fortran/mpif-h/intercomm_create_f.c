@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_INTERCOMM_CREATE = ompi_intercomm_create_f
 #pragma weak pmpi_intercomm_create = ompi_intercomm_create_f
 #pragma weak pmpi_intercomm_create_ = ompi_intercomm_create_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INTERCOMM_CREATE,
                            pmpi_intercomm_create,
                            pmpi_intercomm_create_,
                            pmpi_intercomm_create__,
-                           pompi_intercomm_create_f,
+                           ompi_intercomm_create_f,
                            (MPI_Fint *local_comm, MPI_Fint *local_leader, MPI_Fint *bridge_comm, MPI_Fint *remote_leader, MPI_Fint *tag, MPI_Fint *newintercomm, MPI_Fint *ierr),
                            (local_comm, local_leader, bridge_comm, remote_leader, tag, newintercomm, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_INTERCOMM_CREATE = ompi_intercomm_create_f
 #pragma weak mpi_intercomm_create = ompi_intercomm_create_f
 #pragma weak mpi_intercomm_create_ = ompi_intercomm_create_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INTERCOMM_CREATE,
 #pragma weak MPI_Intercomm_create_f = ompi_intercomm_create_f
 #pragma weak MPI_Intercomm_create_f08 = ompi_intercomm_create_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_INTERCOMM_CREATE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_INTERCOMM_CREATE,
                            mpi_intercomm_create,
                            mpi_intercomm_create_,
                            mpi_intercomm_create__,
                            ompi_intercomm_create_f,
                            (MPI_Fint *local_comm, MPI_Fint *local_leader, MPI_Fint *bridge_comm, MPI_Fint *remote_leader, MPI_Fint *tag, MPI_Fint *newintercomm, MPI_Fint *ierr),
                            (local_comm, local_leader, bridge_comm, remote_leader, tag, newintercomm, ierr) )
-#else
-#define ompi_intercomm_create_f pompi_intercomm_create_f
-#endif
 #endif
 
 

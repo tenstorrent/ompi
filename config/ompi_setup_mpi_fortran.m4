@@ -21,6 +21,8 @@ dnl Copyright (c) 2016-2022 IBM Corporation.  All rights reserved.
 dnl Copyright (c) 2018      FUJITSU LIMITED.  All rights reserved.
 dnl Copyright (c) 2022      Triad National Security, LLC. All rights
 dnl                         reserved.
+dnl Copyright (c) 2025      Stony Brook University.  All rights reserved.
+dnl Copyright (c) 2026      NVIDIA Corporation.  All rights reserved.
 dnl $COPYRIGHT$
 dnl
 dnl Additional copyrights may follow
@@ -150,14 +152,16 @@ AC_DEFUN([OMPI_SETUP_MPI_FORTRAN],[
 
     OMPI_FORTRAN_CHECK([LOGICAL], [yes],
                    [char, int32_t, int, int64_t, long long, long], [-1], [yes])
-    OMPI_FORTRAN_CHECK([LOGICAL*1], [yes],
+    OMPI_FORTRAN_CHECK([LOGICAL*1], [no],
                    [char, int8_t, short, int32_t, int, int64_t, long long, long], [1], [yes])
-    OMPI_FORTRAN_CHECK([LOGICAL*2], [yes],
+    OMPI_FORTRAN_CHECK([LOGICAL*2], [no],
                    [short, int16_t, int32_t, int, int64_t, long long, long], [2], [yes])
-    OMPI_FORTRAN_CHECK([LOGICAL*4], [yes],
+    OMPI_FORTRAN_CHECK([LOGICAL*4], [no],
                    [int32_t, int, int64_t, long long, long], [4], [yes])
-    OMPI_FORTRAN_CHECK([LOGICAL*8], [yes],
+    OMPI_FORTRAN_CHECK([LOGICAL*8], [no],
                    [int, int64_t, long long, long], [8], [yes])
+    OMPI_FORTRAN_CHECK([LOGICAL*16], [no],
+                   [int, int64_t, long long, long], [16], [yes])
 
     OMPI_FORTRAN_CHECK([INTEGER], [yes],
                    [int32_t, int, int64_t, long long, long], [-1], [yes])
@@ -179,13 +183,13 @@ AC_DEFUN([OMPI_SETUP_MPI_FORTRAN],[
                    [short float, float, double, long double, opal_short_float_t],
                    [2], [yes])
     OMPI_FORTRAN_CHECK([REAL*4], [no],
-                   [short float, float, double, long double, opal_short_float_t],
+                   [long double, double, float, short float, opal_short_float_t],
                    [4], [yes])
     OMPI_FORTRAN_CHECK([REAL*8], [no],
-                   [short float, float, double, long double, opal_short_float_t],
+                   [long double, double, float, short float, opal_short_float_t],
                    [8], [yes])
     OMPI_FORTRAN_CHECK([REAL*16], [no],
-                   [short float, float, double, long double, opal_short_float_t],
+                   [_Float128, __float128, long double, double, float, short float, opal_short_float_t],
                    [16], [yes])
 
     # In some compilers, the bit representation of REAL*16 is not the same
@@ -194,7 +198,7 @@ AC_DEFUN([OMPI_SETUP_MPI_FORTRAN],[
     OMPI_FORTRAN_CHECK_REAL16_C_EQUIV
 
     OMPI_FORTRAN_CHECK([DOUBLE PRECISION], [yes],
-                   [short float, float, double, long double, opal_short_float_t],
+                   [long double, double, float, short float, opal_short_float_t],
                    [-1], [yes])
 
     OMPI_FORTRAN_CHECK([COMPLEX], [yes],
@@ -216,19 +220,19 @@ AC_DEFUN([OMPI_SETUP_MPI_FORTRAN],[
                    [short float _Complex, float _Complex, double _Complex, long double _Complex, opal_short_float_complex_t],
                    [4], [no])
     OMPI_FORTRAN_CHECK([COMPLEX*8], [no],
-                   [short float _Complex, float _Complex, double _Complex, long double _Complex, opal_short_float_complex_t],
+                   [long double _Complex, double _Complex, float _Complex, short float _Complex, opal_short_float_complex_t],
                    [8], [no])
     OMPI_FORTRAN_CHECK([COMPLEX*16], [no],
-                   [short float _Complex, float _Complex, double _Complex, long double _Complex, opal_short_float_complex_t],
+                   [long double _Complex, double _Complex, float _Complex, short float _Complex, opal_short_float_complex_t],
                    [16], [no])
     OMPI_FORTRAN_CHECK([COMPLEX*32], [no],
-                   [short float _Complex, float _Complex, double _Complex, long double _Complex, opal_short_float_complex_t],
+                   [_Float128 _Complex, __float128 _Complex, long double _Complex, double _Complex, float _Complex, short float _Complex, opal_short_float_complex_t],
                    [32], [no])
     # Double precision complex types are not standard, but many
     # compilers support it.  Code should be wrapped with #ifdef
     # OMPI_HAVE_FORTRAN_DOUBLE_COMPLEX
     OMPI_FORTRAN_CHECK([DOUBLE COMPLEX], [no],
-                   [short float _Complex, float _Complex, double _Complex, long double _Complex, opal_short_float_complex_t],
+                   [long double _Complex, double _Complex, float _Complex, short float _Complex, opal_short_float_complex_t],
                    [-1], [no])
 
     # Regardless of whether we have fortran bindings, or even a
@@ -250,6 +254,19 @@ AC_DEFUN([OMPI_SETUP_MPI_FORTRAN],[
     # MPI_STATUS, expressed in units of Fortran INTEGERs).  The C
     # MPI_Status struct contains 4 C ints and a size_t.
     OMPI_FORTRAN_STATUS_SIZE=0
+
+    # The C-to-Fortran MPI_Status conversion (and other code that passes
+    # MPI values through Fortran default INTEGERs) copies C ints into
+    # INTEGER slots one-for-one.  If the Fortran default INTEGER is
+    # narrower than a C int, the public MPI_Status fields (and other
+    # values) would be silently truncated.  Refuse to build in that case
+    # rather than produce a broken Fortran MPI.  Skip the check when we
+    # are not building any Fortran bindings (e.g., --disable-mpi-fortran,
+    # or no usable Fortran compiler), in which case
+    # OMPI_SIZEOF_FORTRAN_INTEGER is 0.
+    AS_IF([test "$OMPI_SIZEOF_FORTRAN_INTEGER" -gt 0 && \
+           test "$OMPI_SIZEOF_FORTRAN_INTEGER" -lt "$ac_cv_sizeof_int"],
+          [AC_MSG_ERROR([the Fortran default INTEGER ($OMPI_SIZEOF_FORTRAN_INTEGER bytes) is smaller than a C int ($ac_cv_sizeof_int bytes).  Open MPI requires the Fortran default INTEGER to be at least as large as a C int; otherwise values such as the public MPI_Status fields would be truncated when converted between C and Fortran.  Reconfigure with a larger Fortran default INTEGER, or build with --disable-mpi-fortran.])])
 
     # Calculate how many C int's can fit in sizeof(MPI_Status).  Yes,
     # I do mean C ints -- not Fortran INTEGERS.  The reason is because
@@ -380,6 +397,20 @@ end program]])],
           [OMPI_FORTRAN_BUILD_SIZEOF=1],
           [OMPI_FORTRAN_BUILD_SIZEOF=0])
     AC_SUBST(OMPI_FORTRAN_BUILD_SIZEOF)
+
+    OMPI_FORTRAN_SUPPORTS_WARNING="no"
+    AS_IF([! test x"$enable_deprecate_mpif_h" = "xno"],
+            [OMPI_FORTRAN_CHECK_WARNING([OMPI_FORTRAN_SUPPORTS_WARNING="yes"],
+                                        [OMPI_FORTRAN_SUPPORTS_WARNING="no"])])
+    AC_MSG_CHECKING([if we mark mpif.h bindings as deprecated])
+    AS_IF([test "x$enable_deprecate_mpif_h" = "xyes" && test "$OMPI_FORTRAN_SUPPORTS_WARNING" = "no"],
+          [AC_MSG_ERROR([Request to mark mpif.h as deprecated but Fortran compiler does not support warning preprocessor directive.])])
+    AS_IF([test "x$enable_deprecate_mpif_h" != "xno" && test "$OMPI_FORTRAN_SUPPORTS_WARNING" = "yes"],
+            [OMPI_FORTRAN_DEPRECATE_MPIF_H="#warning mpif.h has been deprecated since MPI 4.1. See MPI-4.1:19.1.4 for details."
+             AC_MSG_RESULT([yes])],
+            [OMPI_FORTRAN_DEPRECATE_MPIF_H=""
+             AC_MSG_RESULT([no])])
+    AC_SUBST(OMPI_FORTRAN_DEPRECATE_MPIF_H)
 
     #--------------------------------------------
     # Fortran use mpi or use mpi_f08 MPI bindings
@@ -715,29 +746,10 @@ end type test_mpi_handle],
     AM_CONDITIONAL([BUILD_FORTRAN_SIZEOF],
         [test $OMPI_FORTRAN_BUILD_SIZEOF -eq 1])
 
-    # There are 2 layers to the MPI mpif.h layer. The only extra thing
-    # that determine mpif.h bindings is that fortran can be disabled
-    # by user. In such cases, we need to not build the target at all.
-    # One layer generates MPI_<foo> bindings. The other layer
-    # generates PMPI_<foo> bindings. The following conditions
-    # determine whether each (or both) these layers are built.
-    #
-    # Superceeding clause:
-    #   - Fortran bindings should be enabled, else everything is
-    #     disabled
-    # 1. MPI_<foo> bindings are needed if:
-    #   - Profiling is not required
-    #   - Profiling is required but weak symbols are not supported
-    # 2. PMPI_<foo> bindings are needed if profiling is required.
-    #
-    # Hence we define 2 conditionals which tell us whether each of
-    # these layers need to be built or NOT
-
-    AM_CONDITIONAL(BUILD_MPI_FORTRAN_MPIFH_BINDINGS_LAYER,
-                   [test $OMPI_PROFILING_COMPILE_SEPARATELY -eq 1 && \
-                    test $OMPI_BUILD_FORTRAN_BINDINGS -gt $OMPI_FORTRAN_NO_BINDINGS])
-    AM_CONDITIONAL(BUILD_PMPI_FORTRAN_MPIFH_BINDINGS_LAYER,
-                   [test $OMPI_BUILD_FORTRAN_BINDINGS -gt $OMPI_FORTRAN_NO_BINDINGS])
+    # The mpif.h bindings are compiled exactly once, emitting both the
+    # strong PMPI_<foo> entry points and the (weak) MPI_<foo> entry
+    # points.  The only question is whether the user has disabled the
+    # Fortran bindings entirely.
     AM_CONDITIONAL(OMPI_BUILD_FORTRAN_MPIFH_BINDINGS,
                    [test $OMPI_BUILD_FORTRAN_BINDINGS -gt $OMPI_FORTRAN_NO_BINDINGS])
 
@@ -807,13 +819,13 @@ end type test_mpi_handle],
     AC_SUBST(OMPI_F08_SUFFIX)
     AC_SUBST(OMPI_F_SUFFIX)
 
-    # This is used to generate weak symbols (or not) in
+    # This is used to generate weak aliases (or not) in
     # ompi/mpi/fortran/mpif-h/<foo>_f.c, and
     # ompi/mpi/fortran/configure-fortran-output.h.
     AC_SUBST(OMPI_FORTRAN_NEED_WRAPPER_ROUTINES)
     AC_DEFINE_UNQUOTED(OMPI_FORTRAN_NEED_WRAPPER_ROUTINES,
                        [$OMPI_FORTRAN_NEED_WRAPPER_ROUTINES],
-                       [Whether the mpi_f08 implementation is using wrapper routines ("bad" Fortran compiler) or weak symbols ("good" Fortran compiler) for the F08 interface definition implementations])
+                       [Whether the mpi_f08 implementation is using wrapper routines ("bad" Fortran compiler) or weak aliases ("good" Fortran compiler) for the F08 interface definition implementations])
 
     AC_DEFINE_UNQUOTED(OMPI_FORTRAN_F08_HANDLE_SIZE,
                        $OMPI_FORTRAN_F08_HANDLE_SIZE,

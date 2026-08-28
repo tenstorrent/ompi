@@ -27,7 +27,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_READ = ompi_file_read_f
 #pragma weak pmpi_file_read = ompi_file_read_f
 #pragma weak pmpi_file_read_ = ompi_file_read_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_READ,
                            pmpi_file_read,
                            pmpi_file_read_,
                            pmpi_file_read__,
-                           pompi_file_read_f,
+                           ompi_file_read_f,
                            (MPI_Fint *fh, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *status, MPI_Fint *ierr),
                            (fh, buf, count, datatype, status, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_READ = ompi_file_read_f
 #pragma weak mpi_file_read = ompi_file_read_f
 #pragma weak mpi_file_read_ = ompi_file_read_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_READ,
 #pragma weak MPI_File_read_f = ompi_file_read_f
 #pragma weak MPI_File_read_f08 = ompi_file_read_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_READ,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_READ,
                            mpi_file_read,
                            mpi_file_read_,
                            mpi_file_read__,
                            ompi_file_read_f,
                            (MPI_Fint *fh, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *status, MPI_Fint *ierr),
                            (fh, buf, count, datatype, status, ierr) )
-#else
-#define ompi_file_read_f pompi_file_read_f
-#endif
 #endif
 
 

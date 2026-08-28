@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_EXSCAN = ompi_exscan_f
 #pragma weak pmpi_exscan = ompi_exscan_f
 #pragma weak pmpi_exscan_ = ompi_exscan_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_EXSCAN,
                            pmpi_exscan,
                            pmpi_exscan_,
                            pmpi_exscan__,
-                           pompi_exscan_f,
+                           ompi_exscan_f,
                            (char *sendbuf, char *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, recvbuf, count, datatype, op, comm, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_EXSCAN = ompi_exscan_f
 #pragma weak mpi_exscan = ompi_exscan_f
 #pragma weak mpi_exscan_ = ompi_exscan_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_EXSCAN,
 #pragma weak MPI_Exscan_f = ompi_exscan_f
 #pragma weak MPI_Exscan_f08 = ompi_exscan_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_EXSCAN,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_EXSCAN,
                            mpi_exscan,
                            mpi_exscan_,
                            mpi_exscan__,
                            ompi_exscan_f,
                            (char *sendbuf, char *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr),
                            (sendbuf, recvbuf, count, datatype, op, comm, ierr) )
-#else
-#define ompi_exscan_f pompi_exscan_f
-#endif
 #endif
 
 

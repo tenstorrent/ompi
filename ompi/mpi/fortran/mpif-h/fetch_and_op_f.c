@@ -29,7 +29,7 @@
 
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FETCH_AND_OP = ompi_fetch_and_op_f
 #pragma weak pmpi_fetch_and_op = ompi_fetch_and_op_f
 #pragma weak pmpi_fetch_and_op_ = ompi_fetch_and_op_f
@@ -42,13 +42,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FETCH_AND_OP,
 			    pmpi_fetch_and_op,
 			    pmpi_fetch_and_op_,
 			    pmpi_fetch_and_op__,
-			    pompi_fetch_and_op_f,
+			    ompi_fetch_and_op_f,
                             (char *origin_addr, char *result_addr, MPI_Fint *datatype, MPI_Fint *target_rank, MPI_Aint *target_disp, MPI_Fint *op, MPI_Fint *win, MPI_Fint *ierr),
 			    (origin_addr, result_addr, datatype, target_rank, target_disp, op, win, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FETCH_AND_OP = ompi_fetch_and_op_f
 #pragma weak mpi_fetch_and_op = ompi_fetch_and_op_f
 #pragma weak mpi_fetch_and_op_ = ompi_fetch_and_op_f
@@ -57,17 +57,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FETCH_AND_OP,
 #pragma weak MPI_Fetch_and_op_f = ompi_fetch_and_op_f
 #pragma weak MPI_Fetch_and_op_f08 = ompi_fetch_and_op_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FETCH_AND_OP,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FETCH_AND_OP,
 			    mpi_fetch_and_op,
 			    mpi_fetch_and_op_,
 			    mpi_fetch_and_op__,
 			    ompi_fetch_and_op_f,
                             (char *origin_addr, char *result_addr, MPI_Fint *datatype, MPI_Fint *target_rank, MPI_Aint *target_disp, MPI_Fint *op, MPI_Fint *win, MPI_Fint *ierr),
 			    (origin_addr, result_addr, datatype, target_rank, target_disp, op, win, ierr) )
-#else
-#define ompi_fetch_and_op_f pompi_fetch_and_op_f
-#endif
 #endif
 
 

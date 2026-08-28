@@ -29,7 +29,7 @@
 
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_GET_ACCUMULATE = ompi_get_accumulate_f
 #pragma weak pmpi_get_accumulate = ompi_get_accumulate_f
 #pragma weak pmpi_get_accumulate_ = ompi_get_accumulate_f
@@ -42,13 +42,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GET_ACCUMULATE,
                             pmpi_get_accumulate,
                             pmpi_get_accumulate_,
                             pmpi_get_accumulate__,
-                            pompi_get_accumulate_f,
+                            ompi_get_accumulate_f,
                             (char *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, char *result_addr, MPI_Fint *result_count, MPI_Fint *result_datatype, MPI_Fint *target_rank, MPI_Aint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *op, MPI_Fint *win, MPI_Fint *ierr),
                             (origin_addr, origin_count, origin_datatype, result_addr, result_count, result_datatype, target_rank, target_disp, target_count, target_datatype, op, win, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_GET_ACCUMULATE = ompi_get_accumulate_f
 #pragma weak mpi_get_accumulate = ompi_get_accumulate_f
 #pragma weak mpi_get_accumulate_ = ompi_get_accumulate_f
@@ -57,17 +57,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_GET_ACCUMULATE,
 #pragma weak MPI_Get_accumulate_f = ompi_get_accumulate_f
 #pragma weak MPI_Get_accumulate_f08 = ompi_get_accumulate_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_GET_ACCUMULATE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_GET_ACCUMULATE,
                             mpi_get_accumulate,
                             mpi_get_accumulate_,
                             mpi_get_accumulate__,
                             ompi_get_accumulate_f,
                             (char *origin_addr, MPI_Fint *origin_count, MPI_Fint *origin_datatype, char *result_addr, MPI_Fint *result_count, MPI_Fint *result_datatype, MPI_Fint *target_rank, MPI_Aint *target_disp, MPI_Fint *target_count, MPI_Fint *target_datatype, MPI_Fint *op, MPI_Fint *win, MPI_Fint *ierr),
                             (origin_addr, origin_count, origin_datatype, result_addr, result_count, result_datatype, target_rank, target_disp, target_count, target_datatype, op, win, ierr) )
-#else
-#define ompi_get_accumulate_f pompi_get_accumulate_f
-#endif
 #endif
 
 

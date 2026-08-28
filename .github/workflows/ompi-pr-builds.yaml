@@ -1,0 +1,170 @@
+name: Build everything
+
+# Build and test Open MPI on both Linux and macOS:
+#
+#   * Remove all .opal_ignore files so that even the normally-skipped
+#     components are compiled.
+#   * Force the Sphinx docs and the Fortran bindings to be built
+#     (--enable-sphinx / --enable-mpi-fortran), installing the Python
+#     packages Sphinx needs.
+#   * Build, then "make check" (intentionally before "make install"),
+#     then install.
+#   * Build and run all of the examples in the examples/ directory.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ompi-pr-builds:
+    name: ${{ matrix.os }} ${{ matrix.config_name }}
+    strategy:
+      # Run both platforms to completion even if one fails.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            config_name: default
+            configure_options: >-
+              --enable-sphinx
+              --enable-mpi-fortran
+              --disable-silent-rules
+          - os: ubuntu-latest
+            config_name: mca-dso
+            configure_options: >-
+              --enable-sphinx
+              --enable-mpi-fortran
+              --disable-silent-rules
+              --enable-mca-dso
+          - os: macos-latest
+            config_name: default
+            configure_options: >-
+              --enable-sphinx
+              --enable-mpi-fortran
+              --disable-silent-rules
+          - os: macos-latest
+            config_name: mca-dso
+            configure_options: >-
+              --enable-sphinx
+              --enable-mpi-fortran
+              --disable-silent-rules
+              --enable-mca-dso
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: recursive
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3
+
+    - name: Install Python packages (Sphinx and friends)
+      run: python -m pip install --upgrade pip -r docs/requirements.txt
+
+    - name: Set up macOS build dependencies
+      if: runner.os == 'macOS'
+      run: |
+        # Create a plain "gfortran" symlink (Homebrew installs it as
+        # gfortran-NN).
+        cd $(brew --prefix)/bin
+        gfortran=$(ls gfortran-* | sort | head -n 1)
+        sudo ln -s $gfortran gfortran
+        # Autotools
+        brew install autoconf automake libtool
+        # Keep Homebrew's libevent from being picked up by configure
+        brew unlink libevent || true
+
+    - name: Set up Linux build dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool flex gfortran
+
+    - name: Remove .opal_ignore files so that we build all components
+      run: |
+        find . -name .opal_ignore -exec rm -f {} \; -print
+
+    - name: Build Open MPI (forcing Sphinx docs and Fortran bindings)
+      run: |
+        NCPU=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)
+        # Parallelize automake's Makefile.in generation during autogen.pl.
+        export AUTOMAKE_JOBS=$NCPU
+        ./autogen.pl
+        ./configure --prefix=${PWD}/install ${{ matrix.configure_options }}
+        make -j $NCPU
+
+    - name: Run unit tests
+      # Deliberately run "make check" BEFORE "make install".
+      # VERBOSE=1 causes logs to be cat'ed if a test fails.
+      run: make check VERBOSE=1
+
+    - name: Install Open MPI
+      run: make install
+
+    - name: Add Open MPI to PATH
+      run: echo "${PWD}/install/bin" >> "$GITHUB_PATH"
+
+    - name: Run the MPI Standard ABI test suite
+      # Run "make check-abi" after "make install": unlike the "check-fast"
+      # suite that "make check" runs above, check-abi launches real MPI jobs
+      # and so needs the installed mpirun (now on PATH).  VERBOSE=1 dumps each
+      # failing probe's command + output (Automake-style) so failures here are
+      # diagnosable from the CI log.
+      env:
+        # GitHub runners have very few cores, so the dynamic-process probes
+        # (MPI_Comm_spawn / MPI_Comm_spawn_multiple) have no free slots to
+        # spawn into ("All nodes which are allocated for this job are already
+        # filled").  Let prte oversubscribe so it can place the spawned
+        # children.
+        PRTE_MCA_rmaps_default_mapping_policy: ":OVERSUBSCRIBE"
+      run: make -C ompi/test/mpi-abi check-abi VERBOSE=1
+
+    - name: Run the tests that need mpirun
+      # Like check-abi above, this runs after "make install": "make check"
+      # can only run non-MPI tests and MPI singletons (Automake runs each
+      # test binary directly), and the build-tree mpirun is only a wrapper
+      # that exec's the *installed* prterun.  Nothing else in CI enables
+      # the asynchronous modex, so without this step that code path gets
+      # no coverage at all.
+      run: make -C ompi/test/mpirun check-mpirun
+
+    - name: Build all examples
+      run: |
+        cd examples
+        make
+
+    - name: Run all built examples
+      run: |
+        cd examples
+        status=0
+        # Run every example binary that was actually built.  Built
+        # binaries are regular, executable, and have no filename
+        # extension (this skips sources, Makefiles, and macOS .dSYM
+        # bundles).  OpenSHMEM examples are launched with oshrun; all
+        # others with mpirun.
+        #
+        # Every example should finish in seconds.  The launcher-level
+        # --timeout turns a hung example (e.g., a rank deadlocked in a
+        # PMIx fence, issue #14125) into a prompt failure of that one
+        # example instead of stalling the job until the 6-hour GitHub
+        # runner timeout kills it.
+        for exe in *; do
+          [ -f "$exe" ] && [ -x "$exe" ] || continue
+          case "$exe" in *.*) continue ;; esac
+          case "$exe" in
+            *oshmem*|oshmem_*) launcher=oshrun ;;
+            *)                 launcher=mpirun ;;
+          esac
+          echo "==== Running $exe (via $launcher) ===="
+          if ! "$launcher" --timeout 300 --map-by ppr:1:core "./$exe"; then
+            echo "==== $exe FAILED"
+            status=1
+          fi
+        done
+        exit $status

@@ -27,7 +27,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_WRITE_ORDERED = ompi_file_write_ordered_f
 #pragma weak pmpi_file_write_ordered = ompi_file_write_ordered_f
 #pragma weak pmpi_file_write_ordered_ = ompi_file_write_ordered_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_WRITE_ORDERED,
                            pmpi_file_write_ordered,
                            pmpi_file_write_ordered_,
                            pmpi_file_write_ordered__,
-                           pompi_file_write_ordered_f,
+                           ompi_file_write_ordered_f,
                            (MPI_Fint *fh, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *status, MPI_Fint *ierr),
                            (fh, buf, count, datatype, status, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_WRITE_ORDERED = ompi_file_write_ordered_f
 #pragma weak mpi_file_write_ordered = ompi_file_write_ordered_f
 #pragma weak mpi_file_write_ordered_ = ompi_file_write_ordered_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_WRITE_ORDERED,
 #pragma weak MPI_File_write_ordered_f = ompi_file_write_ordered_f
 #pragma weak MPI_File_write_ordered_f08 = ompi_file_write_ordered_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_WRITE_ORDERED,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_WRITE_ORDERED,
                            mpi_file_write_ordered,
                            mpi_file_write_ordered_,
                            mpi_file_write_ordered__,
                            ompi_file_write_ordered_f,
                            (MPI_Fint *fh, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *status, MPI_Fint *ierr),
                            (fh, buf, count, datatype, status, ierr) )
-#else
-#define ompi_file_write_ordered_f pompi_file_write_ordered_f
-#endif
 #endif
 
 

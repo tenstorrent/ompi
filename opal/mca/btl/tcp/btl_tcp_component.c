@@ -20,7 +20,7 @@
  * Copyright (c) 2014-2017 Research Organization for Information Science
  *                         and Technology (RIST). All rights reserved.
  * Copyright (c) 2018-2022 Amazon.com, Inc. or its affiliates.  All Rights reserved.
- * Copyright (c) 2023      Jeffrey M. Squyres.  All rights reserved.
+ * Copyright (c) 2023-2026 Jeffrey M. Squyres.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -59,6 +59,12 @@
 #ifdef HAVE_SYS_TIME_H
 #    include <sys/time.h>
 #endif
+#ifdef HAVE_SYS_UCRED_H
+#    include <sys/ucred.h>
+#endif /* HAVE_SYS_UCRED_H */
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
 
 #include "opal/constants.h"
 #include "opal/mca/btl/base/base.h"
@@ -127,6 +133,64 @@ mca_btl_tcp_component_t mca_btl_tcp_component = {
         .btl_progress = NULL,
     }};
 MCA_BASE_COMPONENT_INIT(opal, btl, tcp)
+
+void mca_btl_tcp_print_info_about_socket(int sd, char* fmt, ...)
+{
+    struct sockaddr_storage addr;
+    opal_socklen_t addr_len = sizeof(addr);
+    va_list list;
+    time_t ts = time(NULL);
+    // Guarantee to have more than enough space to handle address strings
+    char ip_str[INET6_ADDRSTRLEN * 2] = "unknown";
+    char timestamp[26];
+    ctime_r(&ts, timestamp);
+    timestamp[24] = '\0'; // remove the newline
+ 
+    /* lookup peer address */
+    if (getpeername(sd, (struct sockaddr*)&addr, &addr_len) != 0) {
+        /* too bad, nothing we can do right now */
+    } 
+    if (addr.ss_family == AF_INET) {
+        struct sockaddr_in* sa = (struct sockaddr_in*)&addr;
+        inet_ntop(AF_INET, &(sa->sin_addr), ip_str, INET_ADDRSTRLEN);
+    }
+#if OPAL_ENABLE_IPV6
+    else if (addr.ss_family == AF_INET6) {
+        struct sockaddr_in6* sa6 = (struct sockaddr_in6*)&addr;
+        inet_ntop(AF_INET6, &(sa6->sin6_addr), ip_str, INET6_ADDRSTRLEN);
+    }
+#endif
+    else if (addr.ss_family == AF_UNIX) {
+#if defined(HAVE_SO_PEERCRED)
+        struct ucred peer_creds;
+        socklen_t len = sizeof(peer_creds);
+        getsockopt(sd, SOL_SOCKET, SO_PEERCRED, &peer_creds, &len);
+        snprintf(ip_str, sizeof(ip_str), "unix-cred(pid=%d, uid=%d, gid=%d)", peer_creds.pid, peer_creds.uid, peer_creds.gid);
+#elif defined(HAVE_LOCAL_PEERCRED)
+        struct xucred peer_creds;
+        socklen_t len = sizeof(peer_creds);
+        getsockopt(sd, 0, LOCAL_PEERCRED, &peer_creds, &len);
+        snprintf(ip_str, sizeof(ip_str), "unix-cred(cr_uid=%d)", peer_creds.cr_uid);
+#elif defined(HAVE_GETPEEREID)
+        uid_t peer_euid;
+        gid_t peer_egid;
+
+        // A connected AF_UNIX socket must be of type SOCK_STREAM or SOCK_SEQPACKET.
+        if (getpeereid(sd, &peer_euid, &peer_egid) == -1) {
+            snprintf(ip_str, sizeof(ip_str), "unix-cred(unknown)");
+        } else {
+            snprintf(ip_str, sizeof(ip_str), "unix-cred(euid=%d, egid=%d)", peer_euid, peer_egid);
+        }
+#else
+        snprintf(ip_str, sizeof(ip_str), "unix-socket");
+#endif
+    }
+    fprintf(stderr, "[%s] socket %d (peer %s) ", timestamp, sd, ip_str);
+    va_start(list, fmt);
+    vfprintf(stderr, fmt, list);
+    va_end(list);
+    fprintf(stderr, "\n");
+}
 
 /*
  * utility routines for parameter registration
@@ -304,6 +368,13 @@ static int mca_btl_tcp_component_register(void)
     free(message);
 #endif
 
+    mca_btl_tcp_param_register_int("recv_timeout", "Timeout (usec) for receiving data on a socket. Has impact only during connection handshake",
+                                    250000  /* .25s */, OPAL_INFO_LVL_4,
+                                    &mca_btl_tcp_component.tcp_recv_timeout);
+    mca_btl_tcp_param_register_int("handshake_timeout", "Timeout (usec) for connection handshake. Connection is dropped if the handshake has not been received during this time frame",
+                                   1 * 1000000  /* 1s */, OPAL_INFO_LVL_4,
+                                   &mca_btl_tcp_component.tcp_handshake_timeout);
+
     /* Check if we should support async progress */
     mca_btl_tcp_param_register_int("progress_thread", NULL, 0, OPAL_INFO_LVL_1,
                                    &mca_btl_tcp_component.tcp_enable_progress_thread);
@@ -404,6 +475,7 @@ static int mca_btl_tcp_component_open(void)
 static int mca_btl_tcp_component_close(void)
 {
     mca_btl_tcp_event_t *event, *next;
+    bool free_event_base = false;
 
     /**
      * If we have a progress thread we should shut it down before
@@ -425,8 +497,10 @@ static int mca_btl_tcp_component_close(void)
             assert(-1 == mca_btl_tcp_progress_thread_trigger);
         }
         opal_event_del(&mca_btl_tcp_component.tcp_recv_thread_async_event);
-        opal_event_base_free(mca_btl_tcp_event_base);
-        mca_btl_tcp_event_base = NULL;
+        /* This private base still hosts the listening-socket events, the
+           pending tcp_events, and the endpoint events, all deleted below --
+           it cannot be freed until they are gone.  Just note that we own it. */
+        free_event_base = true;
 
         /* Close the remaining pipes */
         if (-1 != mca_btl_tcp_pipe_to_progress[0]) {
@@ -475,6 +549,21 @@ static int mca_btl_tcp_component_close(void)
     OBJ_DESTRUCT(&mca_btl_tcp_component.tcp_frag_user);
     OBJ_DESTRUCT(&mca_btl_tcp_component.tcp_lock);
     OPAL_LIST_DESTRUCT(&mca_btl_tcp_component.local_ifs);
+
+    /* Every event this component registered has now been deleted, so a
+       private (progress thread) base can finally be freed. */
+    if (free_event_base) {
+        opal_event_base_free(mca_btl_tcp_event_base);
+    }
+    /* Drop the alias on every close path, owned base or not.  OPAL may free
+       and recreate the shared base between this close and a future open of
+       this component (MPI Sessions closes and re-opens the btl framework),
+       and mca_btl_tcp_component_create_listen() decides whether it still
+       needs a progress-thread base by NULL-checking this pointer -- which
+       mca_btl_tcp_component_open() never resets.  A stale alias would make
+       the next open skip base creation and register events on a base from a
+       dead generation. */
+    mca_btl_tcp_event_base = NULL;
 
     return OPAL_SUCCESS;
 }
@@ -562,12 +651,12 @@ static int mca_btl_tcp_create(const int if_kindex, const char *if_name)
         btl->tcp_ifmask = selected_interface->if_mask;
 
         /* allow user to specify interface bandwidth */
-        sprintf(param, "bandwidth_%s", if_name);
+        snprintf(param, sizeof(param), "bandwidth_%s", if_name);
         mca_btl_tcp_param_register_uint(param, NULL, btl->super.btl_bandwidth, OPAL_INFO_LVL_5,
                                         &btl->super.btl_bandwidth);
 
         /* allow user to override/specify latency ranking */
-        sprintf(param, "latency_%s", if_name);
+        snprintf(param, sizeof(param), "latency_%s", if_name);
         mca_btl_tcp_param_register_uint(param, NULL, btl->super.btl_latency, OPAL_INFO_LVL_5,
                                         &btl->super.btl_latency);
         if (i > 0) {
@@ -576,12 +665,12 @@ static int mca_btl_tcp_create(const int if_kindex, const char *if_name)
         }
 
         /* allow user to specify interface bandwidth */
-        sprintf(param, "bandwidth_%s:%d", if_name, i);
+        snprintf(param, sizeof(param), "bandwidth_%s:%d", if_name, i);
         mca_btl_tcp_param_register_uint(param, NULL, btl->super.btl_bandwidth, OPAL_INFO_LVL_5,
                                         &btl->super.btl_bandwidth);
 
         /* allow user to override/specify latency ranking */
-        sprintf(param, "latency_%s:%d", if_name, i);
+        snprintf(param, sizeof(param), "latency_%s:%d", if_name, i);
         mca_btl_tcp_param_register_uint(param, NULL, btl->super.btl_latency, OPAL_INFO_LVL_5,
                                         &btl->super.btl_latency);
 
@@ -1400,7 +1489,7 @@ static void mca_btl_tcp_component_recv_handler(int sd, short flags, void *user)
     socklen_t rcvtimeo_save_len = sizeof(save);
 
     /* Note, Socket will be in blocking mode during initial handshake
-     * hence setting SO_RCVTIMEO to say 2 seconds here to avoid waiting
+     * hence setting SO_RCVTIMEO to a timeout here to avoid waiting
      * forever when connecting to older versions (that reply to the
      * handshake with only the guid) or when the remote side isn't OMPI
      */
@@ -1414,16 +1503,18 @@ static void mca_btl_tcp_component_recv_handler(int sd, short flags, void *user)
                            opal_process_info.nodename, getpid(),
                            "getsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, ...)",
                            strerror(opal_socket_errno), opal_socket_errno);
+            CLOSE_THE_SOCKET(sd);
             return;
         }
     } else {
-        tv.tv_sec = 2;
-        tv.tv_usec = 0;
+        tv.tv_sec  = mca_btl_tcp_component.tcp_recv_timeout / 1000000;
+        tv.tv_usec = mca_btl_tcp_component.tcp_recv_timeout % 1000000;
         if (0 != setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) {
             opal_show_help("help-mpi-btl-tcp.txt", "socket flag fail", true,
                            opal_process_info.nodename, getpid(),
                            "setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, ...)",
                            strerror(opal_socket_errno), opal_socket_errno);
+            CLOSE_THE_SOCKET(sd);
             return;
         }
     }

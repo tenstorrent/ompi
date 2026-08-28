@@ -41,7 +41,7 @@ EXTRA_DIST = \
         opal_get_version.m4sh \
         ltmain_nag_pthread.diff \
         ltmain_pgi_tp.diff \
-        opal_mca_priority_sort.pl \
+        ompi_check_layering.sh \
         find_common_syms \
         getdate.sh \
         from-savannah/upstream-config.guess \

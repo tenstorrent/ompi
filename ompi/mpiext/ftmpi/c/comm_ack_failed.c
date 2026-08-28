@@ -2,6 +2,7 @@
  * Copyright (c) 2022      The University of Tennessee and The University
  *                         of Tennessee Research Foundation.  All rights
  *                         reserved.
+ * Copyright (c) 2026      Jeffrey M. Squyres.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -19,7 +20,7 @@
 #include "ompi/mpiext/ftmpi/c/mpiext_ftmpi_c.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPIX_Comm_ack_failed = PMPIX_Comm_ack_failed
 #endif
 #define MPIX_Comm_ack_failed PMPIX_Comm_ack_failed
@@ -48,3 +49,10 @@ int MPIX_Comm_ack_failed(MPI_Comm comm, int num_to_ack, int* num_acked)
     OMPI_ERRHANDLER_RETURN(rc, comm, rc, FUNC_NAME);
 }
 
+#if OMPI_BUILD_MPI_PROFILING && !OPAL_HAVE_WEAK_ALIASES
+#undef MPIX_Comm_ack_failed
+__opal_attribute_weak__ int MPIX_Comm_ack_failed(MPI_Comm comm, int num_to_ack, int* num_acked)
+{
+    return PMPIX_Comm_ack_failed(comm, num_to_ack, num_acked);
+}
+#endif

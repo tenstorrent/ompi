@@ -25,11 +25,13 @@ the following:
    # Install Sphinx so that Open MPI can re-build its docs with the
    # installed PRRTE's docs
 
-   virtualalenv venv
-   . ./venv/bin/activate
-   pip install docs/requirements.txt
+   shell$ python3 -m venv venv
+   # Or: python3 -m virtualenv venv
+   # Or: virtualenv --python=python3 venv
+   shell$ . ./venv/bin/activate
+   shell$ pip install -r requirements.txt
 
-   ./configure --with-libevent=external --with-hwloc=external \
+   shell$ ./configure --with-libevent=external --with-hwloc=external \
        --with-pmix=external --with-prrte=external ...
 
 .. important:: Note the installation of the Sphinx tool so that Open
@@ -145,7 +147,7 @@ performance savings.
 .. note:: If not using a networked filesystem, or if not launching at
           scale, loading a large number of DSO files may not consume a
           noticeable amount of time during MPI process launch.  Put
-          simply: loading DSOs as indvidual files generally only
+          simply: loading DSOs as individual files generally only
           matters when using a networked filesystem while launching at
           scale.
 

@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_INITIALIZED = ompi_initialized_f
 #pragma weak pmpi_initialized = ompi_initialized_f
 #pragma weak pmpi_initialized_ = ompi_initialized_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INITIALIZED,
                            pmpi_initialized,
                            pmpi_initialized_,
                            pmpi_initialized__,
-                           pompi_initialized_f,
+                           ompi_initialized_f,
                            (ompi_fortran_logical_t *flag, MPI_Fint *ierr),
                            (flag, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_INITIALIZED = ompi_initialized_f
 #pragma weak mpi_initialized = ompi_initialized_f
 #pragma weak mpi_initialized_ = ompi_initialized_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INITIALIZED,
 #pragma weak MPI_Initialized_f = ompi_initialized_f
 #pragma weak MPI_Initialized_f08 = ompi_initialized_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_INITIALIZED,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_INITIALIZED,
                            mpi_initialized,
                            mpi_initialized_,
                            mpi_initialized__,
                            ompi_initialized_f,
                            (ompi_fortran_logical_t *flag, MPI_Fint *ierr),
                            (flag, ierr) )
-#else
-#define ompi_initialized_f pompi_initialized_f
-#endif
 #endif
 
 

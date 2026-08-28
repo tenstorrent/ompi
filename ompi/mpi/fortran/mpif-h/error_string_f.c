@@ -27,7 +27,7 @@
 #include "ompi/communicator/communicator.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_ERROR_STRING = ompi_error_string_f
 #pragma weak pmpi_error_string = ompi_error_string_f
 #pragma weak pmpi_error_string_ = ompi_error_string_f
@@ -40,13 +40,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ERROR_STRING,
                             pmpi_error_string,
                             pmpi_error_string_,
                             pmpi_error_string__,
-                            pompi_error_string_f,
+                            ompi_error_string_f,
                             (MPI_Fint *errorcode, char *string, MPI_Fint *resultlen, MPI_Fint *ierr, int string_len),
                             (errorcode, string, resultlen, ierr, string_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_ERROR_STRING = ompi_error_string_f
 #pragma weak mpi_error_string = ompi_error_string_f
 #pragma weak mpi_error_string_ = ompi_error_string_f
@@ -55,17 +55,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_ERROR_STRING,
 #pragma weak MPI_Error_string_f = ompi_error_string_f
 #pragma weak MPI_Error_string_f08 = ompi_error_string_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_ERROR_STRING,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_ERROR_STRING,
                             mpi_error_string,
                             mpi_error_string_,
                             mpi_error_string__,
                             ompi_error_string_f,
                             (MPI_Fint *errorcode, char *string, MPI_Fint *resultlen, MPI_Fint *ierr, int string_len),
                             (errorcode, string, resultlen, ierr, string_len) )
-#else
-#define ompi_error_string_f pompi_error_string_f
-#endif
 #endif
 
 

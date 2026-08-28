@@ -30,7 +30,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_IDUP_WITH_INFO = ompi_comm_idup_with_info_f
 #pragma weak pmpi_comm_idup_with_info = ompi_comm_idup_with_info_f
 #pragma weak pmpi_comm_idup_with_info_ = ompi_comm_idup_with_info_f
@@ -43,13 +43,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_IDUP_WITH_INFO,
                             pmpi_comm_idup_with_info,
                             pmpi_comm_idup_with_info_,
                             pmpi_comm_idup_with_info__,
-                            pompi_comm_idup_with_info_f,
+                            ompi_comm_idup_with_info_f,
                             (MPI_Fint *comm, MPI_Fint *info, MPI_Fint *newcomm, MPI_Fint *request, MPI_Fint *ierr),
                             (comm, info, newcomm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_IDUP_WITH_INFO = ompi_comm_idup_with_info_f
 #pragma weak mpi_comm_idup_with_info = ompi_comm_idup_with_info_f
 #pragma weak mpi_comm_idup_with_info_ = ompi_comm_idup_with_info_f
@@ -58,17 +58,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_IDUP_WITH_INFO,
 #pragma weak MPI_Comm_idup_with_info_f = ompi_comm_idup_with_info_f
 #pragma weak MPI_Comm_idup_with_info_f08 = ompi_comm_idup_with_info_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_IDUP_WITH_INFO,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_IDUP_WITH_INFO,
                             mpi_comm_idup_with_info,
                             mpi_comm_idup_with_info_,
                             mpi_comm_idup_with_info__,
                             ompi_comm_idup_with_info_f,
                             (MPI_Fint *comm, MPI_Fint *info, MPI_Fint *newcomm, MPI_Fint *request, MPI_Fint *ierr),
                             (comm, info, newcomm, request, ierr) )
-#else
-#define ompi_comm_idup_with_info_f pompi_comm_idup_with_info_f
-#endif
 #endif
 
 

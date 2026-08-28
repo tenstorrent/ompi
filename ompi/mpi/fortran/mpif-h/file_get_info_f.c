@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_GET_INFO = ompi_file_get_info_f
 #pragma weak pmpi_file_get_info = ompi_file_get_info_f
 #pragma weak pmpi_file_get_info_ = ompi_file_get_info_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_GET_INFO,
                            pmpi_file_get_info,
                            pmpi_file_get_info_,
                            pmpi_file_get_info__,
-                           pompi_file_get_info_f,
+                           ompi_file_get_info_f,
                            (MPI_Fint *fh, MPI_Fint *info_used, MPI_Fint *ierr),
                            (fh, info_used, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_GET_INFO = ompi_file_get_info_f
 #pragma weak mpi_file_get_info = ompi_file_get_info_f
 #pragma weak mpi_file_get_info_ = ompi_file_get_info_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_GET_INFO,
 #pragma weak MPI_File_get_info_f = ompi_file_get_info_f
 #pragma weak MPI_File_get_info_f08 = ompi_file_get_info_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_GET_INFO,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_GET_INFO,
                            mpi_file_get_info,
                            mpi_file_get_info_,
                            mpi_file_get_info__,
                            ompi_file_get_info_f,
                            (MPI_Fint *fh, MPI_Fint *info_used, MPI_Fint *ierr),
                            (fh, info_used, ierr) )
-#else
-#define ompi_file_get_info_f pompi_file_get_info_f
-#endif
 #endif
 
 

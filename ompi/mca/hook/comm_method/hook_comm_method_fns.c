@@ -18,6 +18,8 @@
 
 #include "opal/util/string_copy.h"
 #include "ompi/communicator/communicator.h"
+#include "ompi/datatype/ompi_datatype.h"
+#include "ompi/op/op.h"
 #include "ompi/mca/pml/pml.h"
 #include "opal/mca/btl/btl.h"
 #include "ompi/mca/pml/base/base.h"
@@ -325,9 +327,9 @@ abbreviate_list_into_string(char *str, int max, int *list, int nlist)
                     strcpy(&str[strlen(str)], ", ");
                 }
                 if (lo != hi) {
-                    sprintf(&str[strlen(str)], "%d - %d", lo, hi);
+                    snprintf(&str[strlen(str)], max - strlen(str), "%d - %d", lo, hi);
                 } else {
-                    sprintf(&str[strlen(str)], "%d", lo);
+                    snprintf(&str[strlen(str)], max - strlen(str), "%d", lo);
                 }
             }
 /*
@@ -352,9 +354,9 @@ abbreviate_list_into_string(char *str, int max, int *list, int nlist)
             strcpy(&str[strlen(str)], ", ");
         }
         if (lo != hi) {
-            sprintf(&str[strlen(str)], "%d - %d", lo, hi);
+            snprintf(&str[strlen(str)], max - strlen(str), "%d - %d", lo, hi);
         } else {
-            sprintf(&str[strlen(str)], "%d", lo);
+            snprintf(&str[strlen(str)], max - strlen(str), "%d", lo);
         }
     }
 }
@@ -460,7 +462,7 @@ ompi_report_comm_methods(int called_from_location)
 
         len = strlen(opal_process_info.nodename) + 100;
         hoststring  = malloc(len + 1);
-        sprintf(hoststring, "Host %d [%s] ranks ",
+        snprintf(hoststring, len + 1, "Host %d [%s] ranks ",
             myleaderrank, opal_process_info.nodename);
 
         abbreviate_list_into_string(&hoststring[strlen(hoststring)],
@@ -511,16 +513,16 @@ ompi_report_comm_methods(int called_from_location)
         free(p);
     }
 
-    MPI_Datatype mydt;
-    MPI_Op myop;
-    MPI_Type_contiguous(sizeof(comm_method_string_conversion_t), MPI_BYTE, &mydt);
-    MPI_Type_commit(&mydt);
-    MPI_Op_create(myfn, 1, &myop);
+    ompi_datatype_t *mydt;
+    ompi_op_t *myop;
+    ompi_datatype_create_contiguous(sizeof(comm_method_string_conversion_t), MPI_BYTE, &mydt);
+    ompi_datatype_commit(&mydt);
+    myop = ompi_op_create_user(true, false, (ompi_op_fortran_handler_fn_t *) myfn);
     leader_comm->c_coll->coll_allreduce(
         MPI_IN_PLACE, (void*)&comm_method_string_conversion, 1, mydt, myop, leader_comm,
             leader_comm->c_coll->coll_allreduce_module);
-    MPI_Op_free(&myop);
-    MPI_Type_free(&mydt);
+    OBJ_RELEASE(myop);
+    ompi_datatype_destroy(&mydt);
 
     // Sort communication method string arrays after reduction
     qsort(&comm_method_string_conversion.str[1],
@@ -548,7 +550,7 @@ ompi_report_comm_methods(int called_from_location)
         ompi_count_array_t lens_desc;
         ompi_disp_array_t disps_desc;
 
-        // First get the array of host strings (host names and task lists) 
+        // First get the array of host strings (host names and task lists)
         // for all nodes.
         len = strlen(hoststring) + 1;
         if (myleaderrank == 0) {
@@ -642,7 +644,7 @@ ompi_report_comm_methods(int called_from_location)
 // 2: 2d table
         if (nleaderranks <= max2Dprottable) {
             char *str, *p;
-            int tmp, per, has_ucx_transport;
+            int tmp, per, has_ucx_transport, bufsize;
             int strlens[NUM_COMM_METHODS];
 
             // characters per entry in the 2d table, must be large enough
@@ -668,11 +670,11 @@ ompi_report_comm_methods(int called_from_location)
                     if (tmp+1 > per) { per = tmp+1; }
                 }
             }
-
-            str = malloc(nleaderranks * per + 1);
+            bufsize = nleaderranks * per + 1;
+            str = malloc(bufsize);
             p = str;
             for (i=0; i<nleaderranks; ++i) {
-                sprintf(p, "%d", i);
+                snprintf(p, bufsize - (p - str), "%d", i);
                 for (j=(int)strlen(p); j<per; ++j) {
                     p[j] = ' ';
                 }
@@ -698,12 +700,12 @@ ompi_report_comm_methods(int called_from_location)
                 for (k=0; k<nleaderranks; ++k) {
                     char *method_string;
                     char ucx_label[20];
-                    
+
                     method_string = comm_method_to_string(method[i * nleaderranks + k]);
                     if (0 == strncmp(method_string, UCX_TAG, strlen(UCX_TAG))) {
                         n = lookup_string_in_conversion_struct(&comm_method_string_conversion,
                                                                method_string);
-                        sprintf(ucx_label, "ucx[%3d]", n);
+                        snprintf(ucx_label, sizeof(ucx_label), "ucx[%3d]", n);
                         strcat(p, ucx_label);
                         methods_used[n / 8] |= (1 << (n % 8));
                         has_ucx_transport = 1;
@@ -755,7 +757,7 @@ ompi_report_comm_methods(int called_from_location)
         }
         else if (nleaderranks <= max2D1Cprottable) {
             char *str, *p;
-            int tmp, per, done;
+            int tmp, per, done, bufsize;
             char char_code[NUM_COMM_METHODS], next_char;
             int method_count[NUM_COMM_METHODS];
 
@@ -798,12 +800,13 @@ ompi_report_comm_methods(int called_from_location)
                 }
             }
 
-            str = malloc(per + 32 + nleaderranks * 2 + 1);
+            bufsize = per + 32 + nleaderranks * 2 + 1;
+            str = malloc(bufsize);
             p = str;
-            sprintf(p, "0 1 2 3 ");
+            snprintf(p, bufsize,  "0 1 2 3 ");
             p += 8;
             for (i=4; i<nleaderranks; i+=4) {
-                sprintf(p, "%d", i);
+                snprintf(p, bufsize - (p - str), "%d", i);
                 for (j=(int)strlen(p); j<8; ++j) {
                     p[j] = ' ';
                 }
@@ -972,15 +975,16 @@ ompi_report_comm_methods(int called_from_location)
                         }
                     }
                     if (is_nonconformist) {
-                        char *str = malloc(1024);
-//                      int first = 1;
-                        sprintf(str, "  host %d:", i);
+                        const size_t bufsize = 1024;
+                        char *str = malloc(bufsize);
+                        snprintf(str, bufsize, "  host %d:", i);
                         for (k=0; k<NUM_COMM_METHODS; ++k) {
                             if (method_count[k] > 0) {
 //                              if (!first) {
 //                                  strcat(str, " /");
 //                              }
-                                sprintf(&str[strlen(str)],
+                                snprintf(&str[strlen(str)],
+                                    1024 - strlen(str),
                                     " [%dx %s]",
                                     method_count[k],
                                     comm_method_to_string(k));

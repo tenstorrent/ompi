@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_OP_CREATE = ompi_op_create_f
 #pragma weak pmpi_op_create = ompi_op_create_f
 #pragma weak pmpi_op_create_ = ompi_op_create_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_OP_CREATE,
                            pmpi_op_create,
                            pmpi_op_create_,
                            pmpi_op_create__,
-                           pompi_op_create_f,
+                           ompi_op_create_f,
                            (ompi_op_fortran_handler_fn_t* function, ompi_fortran_logical_t *commute, MPI_Fint *op, MPI_Fint *ierr),
                            (function, commute, op, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_OP_CREATE = ompi_op_create_f
 #pragma weak mpi_op_create = ompi_op_create_f
 #pragma weak mpi_op_create_ = ompi_op_create_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_OP_CREATE,
 #pragma weak MPI_Op_create_f = ompi_op_create_f
 #pragma weak MPI_Op_create_f08 = ompi_op_create_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_OP_CREATE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_OP_CREATE,
                            mpi_op_create,
                            mpi_op_create_,
                            mpi_op_create__,
                            ompi_op_create_f,
                            (ompi_op_fortran_handler_fn_t* function, ompi_fortran_logical_t *commute, MPI_Fint *op, MPI_Fint *ierr),
                            (function, commute, op, ierr) )
-#else
-#define ompi_op_create_f pompi_op_create_f
-#endif
 #endif
 
 

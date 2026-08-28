@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_STATUS_SET_ELEMENTS = ompi_status_set_elements_f
 #pragma weak pmpi_status_set_elements = ompi_status_set_elements_f
 #pragma weak pmpi_status_set_elements_ = ompi_status_set_elements_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_STATUS_SET_ELEMENTS,
                            pmpi_status_set_elements,
                            pmpi_status_set_elements_,
                            pmpi_status_set_elements__,
-                           pompi_status_set_elements_f,
+                           ompi_status_set_elements_f,
                            (MPI_Fint *status, MPI_Fint *datatype, MPI_Fint *count, MPI_Fint *ierr),
                            (status, datatype, count, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_STATUS_SET_ELEMENTS = ompi_status_set_elements_f
 #pragma weak mpi_status_set_elements = ompi_status_set_elements_f
 #pragma weak mpi_status_set_elements_ = ompi_status_set_elements_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_STATUS_SET_ELEMENTS,
 #pragma weak MPI_Status_set_elements_f = ompi_status_set_elements_f
 #pragma weak MPI_Status_set_elements_f08 = ompi_status_set_elements_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_STATUS_SET_ELEMENTS,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_STATUS_SET_ELEMENTS,
                            mpi_status_set_elements,
                            mpi_status_set_elements_,
                            mpi_status_set_elements__,
                            ompi_status_set_elements_f,
                            (MPI_Fint *status, MPI_Fint *datatype, MPI_Fint *count, MPI_Fint *ierr),
                            (status, datatype, count, ierr) )
-#else
-#define ompi_status_set_elements_f pompi_status_set_elements_f
-#endif
 #endif
 
 

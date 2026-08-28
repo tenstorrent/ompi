@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_SENDRECV = ompi_sendrecv_f
 #pragma weak pmpi_sendrecv = ompi_sendrecv_f
 #pragma weak pmpi_sendrecv_ = ompi_sendrecv_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SENDRECV,
                            pmpi_sendrecv,
                            pmpi_sendrecv_,
                            pmpi_sendrecv__,
-                           pompi_sendrecv_f,
+                           ompi_sendrecv_f,
                            (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, MPI_Fint *dest, MPI_Fint *sendtag, char *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr),
                            (sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, status, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_SENDRECV = ompi_sendrecv_f
 #pragma weak mpi_sendrecv = ompi_sendrecv_f
 #pragma weak mpi_sendrecv_ = ompi_sendrecv_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SENDRECV,
 #pragma weak MPI_Sendrecv_f = ompi_sendrecv_f
 #pragma weak MPI_Sendrecv_f08 = ompi_sendrecv_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_SENDRECV,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_SENDRECV,
                            mpi_sendrecv,
                            mpi_sendrecv_,
                            mpi_sendrecv__,
                            ompi_sendrecv_f,
                            (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, MPI_Fint *dest, MPI_Fint *sendtag, char *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr),
                            (sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, status, ierr) )
-#else
-#define ompi_sendrecv_f pompi_sendrecv_f
-#endif
 #endif
 
 

@@ -24,6 +24,7 @@
  *                         reserved.
  * Copyright (c) 2021      Nanook Consulting.  All rights reserved.
  * Copyright (c) 2022      IBM Corporation.  All rights reserved.
+ * Copyright (c) 2026      Sandia National Laboratories.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -41,6 +42,7 @@
 #include "ompi/runtime/mpiruntime.h"
 #include "ompi/runtime/params.h"
 #include "ompi/runtime/ompi_rte.h"
+#include "ompi/runtime/ompi_mpit_events.h"
 
 #include "opal/mca/pmix/base/base.h"
 #include "opal/util/argv.h"
@@ -104,11 +106,12 @@ bool ompi_ftmpi_enabled = false;
 #endif /* OPAL_ENABLE_FT_MPI */
 
 static int ompi_stream_buffering_mode = -1;
+static int ompi_mpi_ft_verbose = 0;
 int ompi_comm_verbose_level = 0;
 
 int ompi_mpi_register_params(void)
 {
-    int value;
+    int value = 0;
 
 #if OPAL_ENABLE_FT_MPI
     mca_base_var_scope_t ftscope = MCA_BASE_VAR_SCOPE_READONLY;
@@ -121,15 +124,14 @@ int ompi_mpi_register_params(void)
                                   "Enable UFLM MPI Fault Tolerance framework",
                                   MCA_BASE_VAR_TYPE_BOOL, NULL, 0, 0,
                                   OPAL_INFO_LVL_4, ftscope, &ompi_ftmpi_enabled);
-    value = 0;
     (void) mca_base_var_register ("ompi", "mpi", "ft", "verbose",
                                   "Verbosity level of the ULFM MPI Fault Tolerance framework",
                                   MCA_BASE_VAR_TYPE_INT, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
-                                  OPAL_INFO_LVL_8, MCA_BASE_VAR_SCOPE_LOCAL, &value);
+                                  OPAL_INFO_LVL_8, MCA_BASE_VAR_SCOPE_LOCAL, &ompi_mpi_ft_verbose);
 #if OPAL_ENABLE_FT_MPI
-    if( 0 < value ) {
+    if( 0 < ompi_mpi_ft_verbose ) {
         ompi_ftmpi_output_handle = opal_output_open(NULL);
-        opal_output_set_verbosity(ompi_ftmpi_output_handle, value);
+        opal_output_set_verbosity(ompi_ftmpi_output_handle, ompi_mpi_ft_verbose);
     }
 
     (void) ompi_comm_rbcast_register_params();
@@ -157,9 +159,9 @@ int ompi_mpi_register_params(void)
     /* yield if the node is oversubscribed and allow users to override */
     (void) mca_base_var_register("ompi", "mpi", NULL, "yield_when_idle",
                                  "Yield the processor when waiting for MPI communication (for MPI processes, will default to 1 when oversubscribing nodes)",
-                                 MCA_BASE_VAR_TYPE_BOOL, NULL, 0, 0,
-                                 OPAL_INFO_LVL_5,
-                                 MCA_BASE_VAR_SCOPE_READONLY,
+                                 MCA_BASE_VAR_TYPE_BOOL, NULL, 0,
+                                 MCA_BASE_VAR_FLAG_SETTABLE, OPAL_INFO_LVL_5,
+                                 MCA_BASE_VAR_SCOPE_LOCAL,
                                  &ompi_mpi_yield_when_idle);
 
     ompi_mpi_event_tick_rate = -1;
@@ -450,6 +452,10 @@ int ompi_mpi_register_params(void)
                                   "Verbosity level for communicator management subsystem",
                                   MCA_BASE_VAR_TYPE_INT, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
                                   OPAL_INFO_LVL_8, MCA_BASE_VAR_SCOPE_LOCAL, &ompi_comm_verbose_level);
+
+    /* Register the in-tree MPI_T event producers (idempotent / one-shot, so
+       it is harmless that this runs from every MCA-parameter path). */
+    ompi_mpit_register_events ();
 
     return OMPI_SUCCESS;
 }

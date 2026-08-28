@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_GROUP = ompi_comm_group_f
 #pragma weak pmpi_comm_group = ompi_comm_group_f
 #pragma weak pmpi_comm_group_ = ompi_comm_group_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_GROUP,
                            pmpi_comm_group,
                            pmpi_comm_group_,
                            pmpi_comm_group__,
-                           pompi_comm_group_f,
+                           ompi_comm_group_f,
                            (MPI_Fint *comm, MPI_Fint *group, MPI_Fint *ierr),
                            (comm, group, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_GROUP = ompi_comm_group_f
 #pragma weak mpi_comm_group = ompi_comm_group_f
 #pragma weak mpi_comm_group_ = ompi_comm_group_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_GROUP,
 #pragma weak MPI_Comm_group_f = ompi_comm_group_f
 #pragma weak MPI_Comm_group_f08 = ompi_comm_group_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_GROUP,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_GROUP,
                            mpi_comm_group,
                            mpi_comm_group_,
                            mpi_comm_group__,
                            ompi_comm_group_f,
                            (MPI_Fint *comm, MPI_Fint *group, MPI_Fint *ierr),
                            (comm, group, ierr) )
-#else
-#define ompi_comm_group_f pompi_comm_group_f
-#endif
 #endif
 
 

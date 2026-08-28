@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_IRSEND = ompi_irsend_f
 #pragma weak pmpi_irsend = ompi_irsend_f
 #pragma weak pmpi_irsend_ = ompi_irsend_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IRSEND,
                            pmpi_irsend,
                            pmpi_irsend_,
                            pmpi_irsend__,
-                           pompi_irsend_f,
+                           ompi_irsend_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, dest, tag, comm, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_IRSEND = ompi_irsend_f
 #pragma weak mpi_irsend = ompi_irsend_f
 #pragma weak mpi_irsend_ = ompi_irsend_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_IRSEND,
 #pragma weak MPI_Irsend_f = ompi_irsend_f
 #pragma weak MPI_Irsend_f08 = ompi_irsend_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_IRSEND,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_IRSEND,
                            mpi_irsend,
                            mpi_irsend_,
                            mpi_irsend__,
                            ompi_irsend_f,
                            (char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr),
                            (buf, count, datatype, dest, tag, comm, request, ierr) )
-#else
-#define ompi_irsend_f pompi_irsend_f
-#endif
 #endif
 
 

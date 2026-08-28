@@ -26,7 +26,7 @@
 #include "ompi/datatype/ompi_datatype.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_TYPE_SET_ATTR = ompi_type_set_attr_f
 #pragma weak pmpi_type_set_attr = ompi_type_set_attr_f
 #pragma weak pmpi_type_set_attr_ = ompi_type_set_attr_f
@@ -39,13 +39,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_TYPE_SET_ATTR,
                            pmpi_type_set_attr,
                            pmpi_type_set_attr_,
                            pmpi_type_set_attr__,
-                           pompi_type_set_attr_f,
+                           ompi_type_set_attr_f,
                            (MPI_Fint *type, MPI_Fint *type_keyval, MPI_Aint *attr_val, MPI_Fint *ierr),
                            (type, type_keyval, attr_val, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_TYPE_SET_ATTR = ompi_type_set_attr_f
 #pragma weak mpi_type_set_attr = ompi_type_set_attr_f
 #pragma weak mpi_type_set_attr_ = ompi_type_set_attr_f
@@ -54,17 +54,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_TYPE_SET_ATTR,
 #pragma weak MPI_Type_set_attr_f = ompi_type_set_attr_f
 #pragma weak MPI_Type_set_attr_f08 = ompi_type_set_attr_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_TYPE_SET_ATTR,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_TYPE_SET_ATTR,
                            mpi_type_set_attr,
                            mpi_type_set_attr_,
                            mpi_type_set_attr__,
                            ompi_type_set_attr_f,
                            (MPI_Fint *type, MPI_Fint *type_keyval, MPI_Aint *attr_val, MPI_Fint *ierr),
                            (type, type_keyval, attr_val, ierr) )
-#else
-#define ompi_type_set_attr_f pompi_type_set_attr_f
-#endif
 #endif
 
 void ompi_type_set_attr_f(MPI_Fint *type, MPI_Fint *type_keyval, MPI_Aint *attribute_val, MPI_Fint *ierr)

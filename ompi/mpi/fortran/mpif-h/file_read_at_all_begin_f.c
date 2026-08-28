@@ -25,7 +25,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_READ_AT_ALL_BEGIN = ompi_file_read_at_all_begin_f
 #pragma weak pmpi_file_read_at_all_begin = ompi_file_read_at_all_begin_f
 #pragma weak pmpi_file_read_at_all_begin_ = ompi_file_read_at_all_begin_f
@@ -38,13 +38,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_READ_AT_ALL_BEGIN,
                            pmpi_file_read_at_all_begin,
                            pmpi_file_read_at_all_begin_,
                            pmpi_file_read_at_all_begin__,
-                           pompi_file_read_at_all_begin_f,
+                           ompi_file_read_at_all_begin_f,
                            (MPI_Fint *fh, MPI_Offset *offset, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *ierr),
                            (fh, offset, buf, count, datatype, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_READ_AT_ALL_BEGIN = ompi_file_read_at_all_begin_f
 #pragma weak mpi_file_read_at_all_begin = ompi_file_read_at_all_begin_f
 #pragma weak mpi_file_read_at_all_begin_ = ompi_file_read_at_all_begin_f
@@ -53,17 +53,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_READ_AT_ALL_BEGIN,
 #pragma weak MPI_File_read_at_all_begin_f = ompi_file_read_at_all_begin_f
 #pragma weak MPI_File_read_at_all_begin_f08 = ompi_file_read_at_all_begin_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_READ_AT_ALL_BEGIN,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_READ_AT_ALL_BEGIN,
                            mpi_file_read_at_all_begin,
                            mpi_file_read_at_all_begin_,
                            mpi_file_read_at_all_begin__,
                            ompi_file_read_at_all_begin_f,
                            (MPI_Fint *fh, MPI_Offset *offset, char *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *ierr),
                            (fh, offset, buf, count, datatype, ierr) )
-#else
-#define ompi_file_read_at_all_begin_f pompi_file_read_at_all_begin_f
-#endif
 #endif
 
 

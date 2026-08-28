@@ -26,6 +26,7 @@
 #include "opal/memoryhooks/memory.h"
 #include "opal/util/argv.h"
 #include "opal/util/printf.h"
+#include "opal/util/proc.h"
 
 #include "mpi.h"
 
@@ -73,6 +74,7 @@ OPAL_DECLSPEC void opal_common_ucx_mca_var_register(const mca_base_component_t *
 {
     char *default_tls = "rc_verbs,ud_verbs,rc_mlx5,dc_mlx5,ud_mlx5,cuda_ipc,rocm_ipc";
     char *default_devices = "mlx*";
+    char *old_str = NULL;
     int hook_index;
     int verbose_index;
     int progress_index;
@@ -113,6 +115,7 @@ OPAL_DECLSPEC void opal_common_ucx_mca_var_register(const mca_base_component_t *
     if (NULL == *opal_common_ucx.tls) {
         *opal_common_ucx.tls = strdup(default_tls);
     }
+    old_str = *opal_common_ucx.tls;
 
     tls_index = mca_base_var_register(
         "opal", "opal_common", "ucx", "tls",
@@ -123,6 +126,7 @@ OPAL_DECLSPEC void opal_common_ucx_mca_var_register(const mca_base_component_t *
         "please set to '^posix,sysv,self,tcp,cma,knem,xpmem'.",
         MCA_BASE_VAR_TYPE_STRING, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE | MCA_BASE_VAR_FLAG_DWG,
         OPAL_INFO_LVL_3, MCA_BASE_VAR_SCOPE_LOCAL, opal_common_ucx.tls);
+    free(old_str);
 
     if (NULL == opal_common_ucx.devices) {
         opal_common_ucx.devices = (char**) malloc(sizeof(char*));
@@ -132,6 +136,7 @@ OPAL_DECLSPEC void opal_common_ucx_mca_var_register(const mca_base_component_t *
     if (NULL == *opal_common_ucx.devices) {
         *opal_common_ucx.devices = strdup(default_devices);
     }
+    old_str = *opal_common_ucx.devices;
 
     devices_index = mca_base_var_register(
         "opal", "opal_common", "ucx", "devices",
@@ -139,6 +144,7 @@ OPAL_DECLSPEC void opal_common_ucx_mca_var_register(const mca_base_component_t *
         "bump its priority above ob1. Special values: any (any available)",
         MCA_BASE_VAR_TYPE_STRING, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE | MCA_BASE_VAR_FLAG_DWG,
         OPAL_INFO_LVL_3, MCA_BASE_VAR_SCOPE_LOCAL, opal_common_ucx.devices);
+    free(old_str);
 
     if (component) {
         mca_base_var_register_synonym(verbose_index, component->mca_project_name,
@@ -206,6 +212,9 @@ OPAL_DECLSPEC void opal_common_ucx_mca_deregister(void)
     }
     opal_mem_hooks_unregister_release(opal_common_ucx_mem_release_cb);
     opal_output_close(opal_common_ucx.output);
+    if (opal_common_ucx.opal_mem_hooks) {
+        mca_base_framework_close(&opal_memory_base_framework);
+    }
 }
 
 #if HAVE_DECL_OPEN_MEMSTREAM
@@ -423,27 +432,58 @@ void opal_common_ucx_mca_proc_added(void)
 
 OPAL_DECLSPEC int opal_common_ucx_mca_pmix_fence_nb(int *fenced)
 {
-    return PMIx_Fence_nb(NULL, 0, NULL, 0, opal_common_ucx_mca_fence_complete_cb, (void *) fenced);
+    int ret;
+    
+    /* Singleton processes don't need PMIx fence */
+    if (opal_process_info.is_singleton) {
+        *fenced = 1;
+        return OPAL_SUCCESS;
+    }
+    
+    ret = PMIx_Fence_nb(NULL, 0, NULL, 0, opal_common_ucx_mca_fence_complete_cb, (void *) fenced);
+    
+    if (PMIX_OPERATION_SUCCEEDED == ret) {
+        /* Fence completed immediately, callback will not be invoked by PMIx.
+         * We need to call it explicitly */
+        opal_common_ucx_mca_fence_complete_cb(PMIX_SUCCESS, (void *) fenced);
+        return OPAL_SUCCESS;
+    }
+    
+    return ret;
 }
 
 OPAL_DECLSPEC int opal_common_ucx_mca_pmix_fence(ucp_worker_h worker)
 {
     volatile int fenced = 0;
-    int ret = OPAL_SUCCESS;
+    int ret;
 
-    if (OPAL_SUCCESS
-        != (ret = PMIx_Fence_nb(NULL, 0, NULL, 0, opal_common_ucx_mca_fence_complete_cb,
-                                (void *) &fenced))) {
+    /* Singleton processes don't need PMIx fence */
+    if (opal_process_info.is_singleton) {
+        return OPAL_SUCCESS;
+    }
+
+    ret = PMIx_Fence_nb(NULL, 0, NULL, 0, opal_common_ucx_mca_fence_complete_cb,
+                        (void *) &fenced);
+    
+    if (PMIX_OPERATION_SUCCEEDED == ret) {
+        /* Fence completed immediately, callback will not be invoked by PMIx.
+         * We need to call it explicitly to maintain the contract. */
+        opal_common_ucx_mca_fence_complete_cb(PMIX_SUCCESS, (void *) &fenced);
+        return OPAL_SUCCESS;
+    }
+    
+    if (PMIX_SUCCESS != ret) {
         return ret;
     }
 
+    /* PMIX_SUCCESS means operation is in progress, callback will be invoked */
     MCA_COMMON_UCX_PROGRESS_LOOP(worker) {
         if(fenced) {
             break;
         }
     }
 
-    return ret;
+    return OPAL_SUCCESS;
 }
 
 static void opal_common_ucx_wait_all_requests(void **reqs, int count, ucp_worker_h worker)

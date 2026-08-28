@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_SPLIT = ompi_comm_split_f
 #pragma weak pmpi_comm_split = ompi_comm_split_f
 #pragma weak pmpi_comm_split_ = ompi_comm_split_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_SPLIT,
                            pmpi_comm_split,
                            pmpi_comm_split_,
                            pmpi_comm_split__,
-                           pompi_comm_split_f,
+                           ompi_comm_split_f,
                            (MPI_Fint *comm, MPI_Fint *color, MPI_Fint *key, MPI_Fint *newcomm, MPI_Fint *ierr),
                            (comm, color, key, newcomm, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_SPLIT = ompi_comm_split_f
 #pragma weak mpi_comm_split = ompi_comm_split_f
 #pragma weak mpi_comm_split_ = ompi_comm_split_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_SPLIT,
 #pragma weak MPI_Comm_split_f = ompi_comm_split_f
 #pragma weak MPI_Comm_split_f08 = ompi_comm_split_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_SPLIT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_SPLIT,
                            mpi_comm_split,
                            mpi_comm_split_,
                            mpi_comm_split__,
                            ompi_comm_split_f,
                            (MPI_Fint *comm, MPI_Fint *color, MPI_Fint *key, MPI_Fint *newcomm, MPI_Fint *ierr),
                            (comm, color, key, newcomm, ierr) )
-#else
-#define ompi_comm_split_f pompi_comm_split_f
-#endif
 #endif
 
 

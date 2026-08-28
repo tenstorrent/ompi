@@ -29,7 +29,7 @@
 #include "ompi/mpi/fortran/base/constants.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_NEIGHBOR_ALLTOALL_INIT = ompi_neighbor_alltoall_init_f
 #pragma weak pmpi_neighbor_alltoall_init = ompi_neighbor_alltoall_init_f
 #pragma weak pmpi_neighbor_alltoall_init_ = ompi_neighbor_alltoall_init_f
@@ -42,13 +42,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_NEIGHBOR_ALLTOALL_INIT,
                             pmpi_neighbor_alltoall_init,
                             pmpi_neighbor_alltoall_init_,
                             pmpi_neighbor_alltoall_init__,
-                            pompi_neighbor_alltoall_init_f,
+                            ompi_neighbor_alltoall_init_f,
                             (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *info, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm, info, request, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_NEIGHBOR_ALLTOALL_INIT = ompi_neighbor_alltoall_init_f
 #pragma weak mpi_neighbor_alltoall_init = ompi_neighbor_alltoall_init_f
 #pragma weak mpi_neighbor_alltoall_init_ = ompi_neighbor_alltoall_init_f
@@ -57,17 +57,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_NEIGHBOR_ALLTOALL_INIT,
 #pragma weak MPI_Neighbor_alltoall_init_f = ompi_neighbor_alltoall_init_f
 #pragma weak MPI_Neighbor_alltoall_init_f08 = ompi_neighbor_alltoall_init_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_NEIGHBOR_ALLTOALL_INIT,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_NEIGHBOR_ALLTOALL_INIT,
                             mpi_neighbor_alltoall_init,
                             mpi_neighbor_alltoall_init_,
                             mpi_neighbor_alltoall_init__,
                             ompi_neighbor_alltoall_init_f,
                             (char *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, char *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *info, MPI_Fint *request, MPI_Fint *ierr),
                             (sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm, info, request, ierr) )
-#else
-#define ompi_neighbor_alltoall_init_f pompi_neighbor_alltoall_init_f
-#endif
 #endif
 
 

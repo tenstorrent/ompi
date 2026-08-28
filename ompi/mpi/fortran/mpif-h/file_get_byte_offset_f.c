@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_FILE_GET_BYTE_OFFSET = ompi_file_get_byte_offset_f
 #pragma weak pmpi_file_get_byte_offset = ompi_file_get_byte_offset_f
 #pragma weak pmpi_file_get_byte_offset_ = ompi_file_get_byte_offset_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_GET_BYTE_OFFSET,
                            pmpi_file_get_byte_offset,
                            pmpi_file_get_byte_offset_,
                            pmpi_file_get_byte_offset__,
-                           pompi_file_get_byte_offset_f,
+                           ompi_file_get_byte_offset_f,
                            (MPI_Fint *fh, MPI_Offset *offset, MPI_Offset *disp, MPI_Fint *ierr),
                            (fh, offset, disp, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_FILE_GET_BYTE_OFFSET = ompi_file_get_byte_offset_f
 #pragma weak mpi_file_get_byte_offset = ompi_file_get_byte_offset_f
 #pragma weak mpi_file_get_byte_offset_ = ompi_file_get_byte_offset_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_FILE_GET_BYTE_OFFSET,
 #pragma weak MPI_File_get_byte_offset_f = ompi_file_get_byte_offset_f
 #pragma weak MPI_File_get_byte_offset_f08 = ompi_file_get_byte_offset_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_FILE_GET_BYTE_OFFSET,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_FILE_GET_BYTE_OFFSET,
                            mpi_file_get_byte_offset,
                            mpi_file_get_byte_offset_,
                            mpi_file_get_byte_offset__,
                            ompi_file_get_byte_offset_f,
                            (MPI_Fint *fh, MPI_Offset *offset, MPI_Offset *disp, MPI_Fint *ierr),
                            (fh, offset, disp, ierr) )
-#else
-#define ompi_file_get_byte_offset_f pompi_file_get_byte_offset_f
-#endif
 #endif
 
 

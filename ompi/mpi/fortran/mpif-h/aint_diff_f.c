@@ -32,7 +32,7 @@
  * manually.
  */
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_AINT_DIFF = ompi_aint_diff_f
 #pragma weak pmpi_aint_diff = ompi_aint_diff_f
 #pragma weak pmpi_aint_diff_ = ompi_aint_diff_f
@@ -41,14 +41,14 @@
 #pragma weak PMPI_Aint_diff_f = ompi_aint_diff_f
 #pragma weak PMPI_Aint_diff_f08 = ompi_aint_diff_f
 #else
-MPI_Aint PMPI_AINT_DIFF(MPI_Aint *addr1, MPI_Aint *addr2) { return pompi_aint_diff_f(addr1, addr2); }
-MPI_Aint pmpi_aint_diff(MPI_Aint *addr1, MPI_Aint *addr2) { return pompi_aint_diff_f(addr1, addr2); }
-MPI_Aint pmpi_aint_diff_(MPI_Aint *addr1, MPI_Aint *addr2) { return pompi_aint_diff_f(addr1, addr2); }
-MPI_Aint pmpi_aint_diff__(MPI_Aint *addr1, MPI_Aint *addr2) { return pompi_aint_diff_f(addr1, addr2); }
+MPI_Aint PMPI_AINT_DIFF(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
+MPI_Aint pmpi_aint_diff(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
+MPI_Aint pmpi_aint_diff_(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
+MPI_Aint pmpi_aint_diff__(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_AINT_DIFF = ompi_aint_diff_f
 #pragma weak mpi_aint_diff = ompi_aint_diff_f
 #pragma weak mpi_aint_diff_ = ompi_aint_diff_f
@@ -57,14 +57,10 @@ MPI_Aint pmpi_aint_diff__(MPI_Aint *addr1, MPI_Aint *addr2) { return pompi_aint_
 #pragma weak MPI_Aint_diff_f = ompi_aint_diff_f
 #pragma weak MPI_Aint_diff_f08 = ompi_aint_diff_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-MPI_Aint MPI_AINT_DIFF(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
-MPI_Aint mpi_aint_diff(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
-MPI_Aint mpi_aint_diff_(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
-MPI_Aint mpi_aint_diff__(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
-#else
-#define ompi_aint_diff_f pompi_aint_diff_f
-#endif
+__opal_attribute_weak__ MPI_Aint MPI_AINT_DIFF(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
+__opal_attribute_weak__ MPI_Aint mpi_aint_diff(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
+__opal_attribute_weak__ MPI_Aint mpi_aint_diff_(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
+__opal_attribute_weak__ MPI_Aint mpi_aint_diff__(MPI_Aint *addr1, MPI_Aint *addr2) { return ompi_aint_diff_f(addr1, addr2); }
 #endif
 
 MPI_Aint ompi_aint_diff_f(MPI_Aint *addr1, MPI_Aint *addr2)

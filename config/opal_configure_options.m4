@@ -16,12 +16,12 @@ dnl Copyright (c) 2009      IBM Corporation.  All rights reserved.
 dnl Copyright (c) 2009      Los Alamos National Security, LLC.  All rights
 dnl                         reserved.
 dnl Copyright (c) 2009-2011 Oak Ridge National Labs.  All rights reserved.
-dnl Copyright (c) 2011-2013 NVIDIA Corporation.  All rights reserved.
+dnl Copyright (c) 2011-2026 NVIDIA Corporation.  All rights reserved.
 dnl Copyright (c) 2013-2017 Intel, Inc.  All rights reserved.
 dnl Copyright (c) 2015      Research Organization for Information Science
 dnl                         and Technology (RIST). All rights reserved.
 dnl Copyright (c) 2020      Amazon.com, Inc. or its affiliates.  All Rights
-dnl Copyright (c) 2019-2021 Triad National Security, LLC. All rights
+dnl Copyright (c) 2019-2026 Triad National Security, LLC. All rights
 dnl                         reserved.
 dnl
 dnl $COPYRIGHT$
@@ -39,13 +39,18 @@ opal_show_subtitle "General configuration options"
 # Is this a developer copy?
 #
 
+AC_MSG_CHECKING([Checking if this is a developer copy])
 if test -d ${OPAL_TOP_SRCDIR}/.git; then
     OPAL_DEVEL=1
+    AC_MSG_RESULT([yes])
 else
     OPAL_DEVEL=0
+    AC_MSG_RESULT([no])
 fi
-
-
+AM_CONDITIONAL([OPAL_DEVEL_BUILD], [test "$OPAL_DEVEL" = "1"])
+AS_IF([test "$OPAL_DEVEL" = "1"],
+          [OPAL_SUMMARY_ADD([Miscellaneous], [Developer build], [], ["yes"])],
+          [OPAL_SUMMARY_ADD([Miscellaneous], [Developer build], [], ["no"])])
 #
 # Code coverage options
 #
@@ -286,19 +291,29 @@ AC_DEFINE_UNQUOTED([OPAL_ENABLE_PTY_SUPPORT], [$OPAL_ENABLE_PTY_SUPPORT],
 
 
 #
-# Do we want to disable weak symbols for some reason?
+# Do we want to disable weak aliases for some reason?
 #
 
-AC_MSG_CHECKING([if want weak symbol support])
+AC_ARG_ENABLE([weak-aliases],
+    [AS_HELP_STRING([--enable-weak-aliases],
+                   [use weak symbol aliases, if available (default: enabled)])])
+# --enable-weak-symbols is the historical name for this option; keep it
+# as a deprecated synonym for --enable-weak-aliases.
 AC_ARG_ENABLE([weak-symbols],
     [AS_HELP_STRING([--enable-weak-symbols],
-                   [use weak symbols, if available (default: enabled)])])
-if test "$enable_weak_symbols" != "no"; then
+                   [Deprecated synonym for --enable-weak-aliases])])
+AS_IF([test -n "$enable_weak_symbols"],
+      [AC_MSG_WARN([--enable-weak-symbols is deprecated; please use --enable-weak-aliases instead])
+       AS_IF([test -z "$enable_weak_aliases"],
+             [enable_weak_aliases=$enable_weak_symbols])])
+
+AC_MSG_CHECKING([if want weak alias support])
+if test "$enable_weak_aliases" != "no"; then
     AC_MSG_RESULT([yes])
-    WANT_WEAK_SYMBOLS=1
+    WANT_WEAK_ALIASES=1
 else
     AC_MSG_RESULT([no])
-    WANT_WEAK_SYMBOLS=0
+    WANT_WEAK_ALIASES=0
 fi
 
 
@@ -360,9 +375,11 @@ AC_ARG_ENABLE([heterogeneous],
 if test "$enable_heterogeneous" = "yes" ; then
      AC_MSG_RESULT([yes])
      opal_want_heterogeneous=1
+     OPAL_SUMMARY_ADD([Miscellaneous], [Heterogeneous support], [], [yes])
 else
      AC_MSG_RESULT([no])
      opal_want_heterogeneous=0
+     OPAL_SUMMARY_ADD([Miscellaneous], [Heterogeneous support], [], [no])
 fi
 AC_DEFINE_UNQUOTED([OPAL_ENABLE_HETEROGENEOUS_SUPPORT],
                    [$opal_want_heterogeneous],
@@ -479,21 +496,6 @@ with_ident_string="`eval echo $with_ident_string`"
 AC_DEFINE_UNQUOTED([OPAL_IDENT_STRING], ["$with_ident_string"],
      [ident string for Open MPI])
 AC_MSG_RESULT([$with_ident_string])
-
-
-#
-# Use alternative checksum algorithm
-#
-AC_MSG_CHECKING([if want to use an alternative checksum algo for messages])
-AC_ARG_WITH([dst-checksum],
-     [AS_HELP_STRING([--with-dst-checksum],
-                     [Use an alternative checksum algorithm for messages])])
-if test "$with_dst_checksum" = "yes"; then
-    AC_MSG_RESULT([yes])
-    CFLAGS="-DOPAL_CSUM_DST $CFLAGS"
-else
-    AC_MSG_RESULT([no])
-fi
 
 
 #

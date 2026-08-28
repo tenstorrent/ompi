@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_INTERCOMM_MERGE = ompi_intercomm_merge_f
 #pragma weak pmpi_intercomm_merge = ompi_intercomm_merge_f
 #pragma weak pmpi_intercomm_merge_ = ompi_intercomm_merge_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INTERCOMM_MERGE,
                            pmpi_intercomm_merge,
                            pmpi_intercomm_merge_,
                            pmpi_intercomm_merge__,
-                           pompi_intercomm_merge_f,
+                           ompi_intercomm_merge_f,
                            (MPI_Fint *intercomm, ompi_fortran_logical_t *high, MPI_Fint *newintracomm, MPI_Fint *ierr),
                            (intercomm, high, newintracomm, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_INTERCOMM_MERGE = ompi_intercomm_merge_f
 #pragma weak mpi_intercomm_merge = ompi_intercomm_merge_f
 #pragma weak mpi_intercomm_merge_ = ompi_intercomm_merge_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_INTERCOMM_MERGE,
 #pragma weak MPI_Intercomm_merge_f = ompi_intercomm_merge_f
 #pragma weak MPI_Intercomm_merge_f08 = ompi_intercomm_merge_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_INTERCOMM_MERGE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_INTERCOMM_MERGE,
                            mpi_intercomm_merge,
                            mpi_intercomm_merge_,
                            mpi_intercomm_merge__,
                            ompi_intercomm_merge_f,
                            (MPI_Fint *intercomm, ompi_fortran_logical_t *high, MPI_Fint *newintracomm, MPI_Fint *ierr),
                            (intercomm, high, newintracomm, ierr) )
-#else
-#define ompi_intercomm_merge_f pompi_intercomm_merge_f
-#endif
 #endif
 
 void ompi_intercomm_merge_f(MPI_Fint *intercomm, ompi_fortran_logical_t *high,

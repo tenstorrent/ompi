@@ -3,6 +3,8 @@
 # Copyright (c) 2019      Cisco Systems, Inc.  All rights reserved.
 # Copyright (c) 2020      Research Organization for Information Science
 #                         and Technology (RIST).  All rights reserved.
+# Copyright (C) 2026      Triad National Security, LLC. All rights
+#                         reserved.
 #
 # $COPYRIGHT$
 #
@@ -50,7 +52,7 @@ endif
 include ../Makefile.prototype_files
 template_files =${prototype_files:%=$(abs_top_srcdir)/ompi/mpi/fortran/use-mpi-f08/%}
 
-api_f08_generated.c: $(template_files)
+api_f08_generated.c: $(template_files) $(OMPI_BINDINGS_GENERATOR)
 	$(OMPI_V_GEN) $(PYTHON) $(top_srcdir)/ompi/mpi/bindings/bindings.py \
 	    --builddir $(abs_top_builddir) \
 	    --srcdir $(abs_top_srcdir) \
@@ -62,5 +64,8 @@ api_f08_generated.c: $(template_files)
 
 # Delete generated files on maintainer-clean
 MAINTAINERCLEANFILES = api_f08_generated.c
+if OPAL_DEVEL_BUILD
+CLEANFILES += api_f08_generated.c
+endif
 
 endif

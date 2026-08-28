@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_WIN_COMPLETE = ompi_win_complete_f
 #pragma weak pmpi_win_complete = ompi_win_complete_f
 #pragma weak pmpi_win_complete_ = ompi_win_complete_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WIN_COMPLETE,
                            pmpi_win_complete,
                            pmpi_win_complete_,
                            pmpi_win_complete__,
-                           pompi_win_complete_f,
+                           ompi_win_complete_f,
                            (MPI_Fint *win, MPI_Fint *ierr),
                            (win, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_WIN_COMPLETE = ompi_win_complete_f
 #pragma weak mpi_win_complete = ompi_win_complete_f
 #pragma weak mpi_win_complete_ = ompi_win_complete_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_WIN_COMPLETE,
 #pragma weak MPI_Win_complete_f = ompi_win_complete_f
 #pragma weak MPI_Win_complete_f08 = ompi_win_complete_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_WIN_COMPLETE,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_WIN_COMPLETE,
                            mpi_win_complete,
                            mpi_win_complete_,
                            mpi_win_complete__,
                            ompi_win_complete_f,
                            (MPI_Fint *win, MPI_Fint *ierr),
                            (win, ierr) )
-#else
-#define ompi_win_complete_f pompi_win_complete_f
-#endif
 #endif
 
 

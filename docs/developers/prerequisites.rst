@@ -8,8 +8,7 @@ Although it should probably be assumed, you'll need a C compiler that
 supports C11.
 
 You'll also need a Fortran compiler if you want to build the Fortran
-MPI bindings (the more recent the Fortran compiler, the better), and a
-Java compiler if you want to build the (unofficial) Java MPI bindings.
+MPI bindings (the more recent the Fortran compiler, the better).
 
 GNU Autotools
 -------------
@@ -59,7 +58,7 @@ the Open MPI build, such as (but not limited to):
 
 * When building from a Git clone:
 
-  * Generating the Fortran bindings
+  * Generating the C and Fortran bindings
 
   * Generating the "show help" messages
 
@@ -68,10 +67,13 @@ the Open MPI build, such as (but not limited to):
 
   * Building the Open MPI documentation and man pages
 
+  * Running the MPI ABI tests (optional)
+
 All of these are necessary when building from a Git clone.  Most of
 these can be accomplished with core Python; only building the full
-Open MPI documentation and man pages requires additional Python
-packages (:ref:`see below <developers-requirements-sphinx-label>`).
+Open MPI documentation, man pages, and MPI ABI checking tools requires
+additional Python packages (:ref:`see below
+<developers-requirements-sphinx-label>`).
 
 Perl
 ----
@@ -121,8 +123,8 @@ MacPorts on MacOS), see `the Flex Github repository
 
 .. _developers-requirements-sphinx-label:
 
-Sphinx (and therefore Python)
------------------------------
+Python packages (including Sphinx)
+----------------------------------
 
 `Sphinx <https://www.sphinx-doc.org/>`_ is a Python-based tool used to
 generate both the HTML version of the documentation (that you are
@@ -139,6 +141,12 @@ MPI's Git repository; only the ReStructred Text source code of the
 documentation is in the Git repository.  Hence, if you are building
 Open MPI from a Git clone, you will need Sphinx (and some Python
 modules) in order to build the HTML documentation and man pages.
+
+These Python modules |mdash| together with the packages needed by Open
+MPI's other developer Python tooling (e.g., the MPI ABI test suite)
+|mdash| are consolidated into a single top-level ``requirements.txt``
+file, so a single installation provides all the Python packages that
+Open MPI developers need.
 
 .. important:: Most systems do not have Sphinx and/or the required
                Python modules installed by default.  :ref:`See the

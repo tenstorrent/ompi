@@ -1,6 +1,8 @@
 /* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil -*- */
 /*
  * Copyright (c) 2025      Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2025      Triad National Security, LLC.  All rights reserved.
+ * Copyright (c) 2026      Jeffrey M. Squyres.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -45,7 +47,7 @@ static void ompi_info_memkind_dump (const char *var_name, int num_memkinds, ompi
 }
 #endif
 
-static void ompi_info_memkind_extract (const char* memkind_str, int *num_memkinds, ompi_memkind_t **memkinds)
+static int ompi_info_memkind_extract (const char* memkind_str, int *num_memkinds, ompi_memkind_t **memkinds)
 {
     /* The memkind string is a comma-separated list of memkinds, which can have two forms:
     **   - standalone memkind type, which implies that all restrictors of the memkind are requested
@@ -55,15 +57,35 @@ static void ompi_info_memkind_extract (const char* memkind_str, int *num_memkind
     **    memkind_a:restrictor_1,memkind_a:restrictor_2;
     */
 
+    /* A NULL or empty memkind_str -- or one consisting only of
+     * delimiters, which yields no tokens -- is a request for no memory
+     * allocation kinds */
+    if (NULL == memkind_str ||
+        strspn(memkind_str, ",") == strlen(memkind_str)) {
+        *num_memkinds = 0;
+        *memkinds = NULL;
+        return OMPI_SUCCESS;
+    }
+
     /* Separate requested_str into an array of individual entries */
     int current_max = 0;
     char **memkind_combos = opal_argv_split(memkind_str, ',');
+    if (NULL == memkind_combos) {
+        /* memkind_str has at least one token, so a NULL here can only
+         * mean an allocation failure in the split */
+        *num_memkinds = 0;
+        *memkinds = NULL;
+        return OMPI_ERR_OUT_OF_RESOURCE;
+    }
     int max_num_memkinds = opal_argv_count(memkind_combos);
 
     ompi_memkind_t *memkind_arr = NULL;
     memkind_arr = (ompi_memkind_t *) malloc(max_num_memkinds * sizeof(ompi_memkind_t));
     if (NULL == memkind_arr) {
-        goto err_exit;
+        opal_argv_free(memkind_combos);
+        *num_memkinds = 0;
+        *memkinds = NULL;
+        return OMPI_ERR_OUT_OF_RESOURCE;
     }
     for (int i = 0; i < max_num_memkinds; i++) {
         memkind_arr[i].im_num_restrictors = 0;
@@ -119,12 +141,12 @@ static void ompi_info_memkind_extract (const char* memkind_str, int *num_memkind
         opal_argv_free(tmp_str);
         m = memkind_combos[++iter];
     }
+    opal_argv_free(memkind_combos);
 
- err_exit:
     *num_memkinds = current_max;
     *memkinds = memkind_arr;
 
-    return;
+    return OMPI_SUCCESS;
 }
 
 static int ompi_info_memkind_get_available(int *num_memkinds, ompi_memkind_t **memkinds)
@@ -245,9 +267,14 @@ static int ompi_info_memkind_remove_unsupported (int num_requested, ompi_memkind
     bool have_system_memkind = false;
     bool have_mpi_memkind = false;
     int pos = 0;
-    int *apos = malloc (num_requested *sizeof(int));
-    if (NULL == apos) {
-        return OMPI_ERR_OUT_OF_RESOURCE;
+    int *apos = NULL;
+    /* malloc(0) is allowed to return NULL, so only allocate (and check)
+     * when there are requested memkinds to track */
+    if (num_requested > 0) {
+        apos = malloc (num_requested *sizeof(int));
+        if (NULL == apos) {
+            return OMPI_ERR_OUT_OF_RESOURCE;
+        }
     }
 
     /*
@@ -338,6 +365,7 @@ static int ompi_info_memkind_remove_unsupported (int num_requested, ompi_memkind
 
     *num_provided = total_len;
     *provided_memkinds = final;
+    free(apos);
     return OMPI_SUCCESS;
 }
 
@@ -397,14 +425,22 @@ static bool ompi_info_memkind_validate (const char *assert_str, const char *pare
     ompi_memkind_t *parent_memkinds = NULL;
     bool ret;
 
-    ompi_info_memkind_extract (assert_str, &num_assert_memkinds, &assert_memkinds);
+    ret = (OMPI_SUCCESS == ompi_info_memkind_extract (assert_str, &num_assert_memkinds,
+                                                      &assert_memkinds));
+    if (!ret) {
+        goto exit;
+    }
     ret = ompi_info_memkind_is_subset (num_assert_memkinds, assert_memkinds,
                                        ompi_info_memkind_num_available, ompi_info_memkind_available);
     if (!ret) {
         goto exit;
     }
 
-    ompi_info_memkind_extract (parent_str, &num_parent_memkinds, &parent_memkinds);
+    ret = (OMPI_SUCCESS == ompi_info_memkind_extract (parent_str, &num_parent_memkinds,
+                                                      &parent_memkinds));
+    if (!ret) {
+        goto exit;
+    }
     ret = ompi_info_memkind_is_subset (num_assert_memkinds, assert_memkinds,
                                        num_parent_memkinds, parent_memkinds);
 
@@ -443,9 +479,14 @@ static bool ompi_info_memkind_check_no_accel_from_string (char *mstring)
     int num_memkinds;
     ompi_memkind_t *memkinds = NULL;
 
-    ompi_info_memkind_extract (mstring, &num_memkinds, &memkinds);
+    if (OMPI_SUCCESS != ompi_info_memkind_extract (mstring, &num_memkinds, &memkinds)) {
+        return false;
+    }
+
+    /* Note that an empty set of memkinds (num_memkinds == 0) trivially
+     * contains no accelerator kinds, i.e., returns true */
+    ret = ompi_info_memkind_check_no_accel (num_memkinds, memkinds);
     if (NULL != memkinds) {
-        ret = ompi_info_memkind_check_no_accel (num_memkinds, memkinds);
         ompi_info_memkind_free(num_memkinds, memkinds);
     }
 
@@ -468,7 +509,10 @@ int ompi_info_memkind_process (const char* requested_str, char **provided_str,
         return OMPI_SUCCESS;
     }
 
-    ompi_info_memkind_extract (requested_str, &num_requested_memkinds, &requested_memkinds);
+    err = ompi_info_memkind_extract (requested_str, &num_requested_memkinds, &requested_memkinds);
+    if (OMPI_SUCCESS != err) {
+        goto exit;
+    }
     err = ompi_info_memkind_get_available (&num_available_memkinds, &available_memkinds);
     if (OMPI_SUCCESS != err) {
         goto exit;
@@ -544,8 +588,8 @@ const char *ompi_info_memkind_cb (opal_infosubscriber_t *obj, const char *key, c
 int ompi_info_memkind_copy_or_set (opal_infosubscriber_t *parent, opal_infosubscriber_t *child,
                                    opal_info_t *info, ompi_info_memkind_assert_type *type)
 {
-    opal_cstring_t *parent_val;
-    opal_cstring_t *assert_val;
+    opal_cstring_t *parent_val = NULL;
+    opal_cstring_t *assert_val = NULL;
     ompi_info_memkind_assert_type assert_type = OMPI_INFO_MEMKIND_ASSERT_UNDEFINED;
     char *final_str = NULL;
     int flag;
@@ -569,7 +613,6 @@ int ompi_info_memkind_copy_or_set (opal_infosubscriber_t *parent, opal_infosubsc
         if (ret) {
             final_str = (char*) assert_val->string;
         }
-        OBJ_RELEASE(assert_val);
 
         opal_infosubscribe_subscribe (child, "mpi_assert_memory_alloc_kinds", final_str,
                                       ompi_info_memkind_cb);
@@ -578,10 +621,16 @@ int ompi_info_memkind_copy_or_set (opal_infosubscriber_t *parent, opal_infosubsc
  exit:
     opal_infosubscribe_subscribe (child, "mpi_memory_alloc_kinds", final_str,
                                   ompi_info_memkind_cb);
-    OBJ_RELEASE(parent_val);
 
     if (ompi_info_memkind_check_no_accel_from_string(final_str)) {
         assert_type = OMPI_INFO_MEMKIND_ASSERT_NO_ACCEL;
+    }
+
+    if (NULL != assert_val) {
+        OBJ_RELEASE(assert_val);
+    }
+    if (NULL != parent_val) {
+        OBJ_RELEASE(parent_val);
     }
 
     *type = assert_type;

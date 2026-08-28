@@ -24,7 +24,7 @@
 #include "ompi/mpi/fortran/mpif-h/bindings.h"
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_COMM_RANK = ompi_comm_rank_f
 #pragma weak pmpi_comm_rank = ompi_comm_rank_f
 #pragma weak pmpi_comm_rank_ = ompi_comm_rank_f
@@ -37,13 +37,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_RANK,
                            pmpi_comm_rank,
                            pmpi_comm_rank_,
                            pmpi_comm_rank__,
-                           pompi_comm_rank_f,
+                           ompi_comm_rank_f,
                            (MPI_Fint *comm, MPI_Fint *rank, MPI_Fint *ierr),
                            (comm, rank, ierr) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_COMM_RANK = ompi_comm_rank_f
 #pragma weak mpi_comm_rank = ompi_comm_rank_f
 #pragma weak mpi_comm_rank_ = ompi_comm_rank_f
@@ -52,17 +52,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_COMM_RANK,
 #pragma weak MPI_Comm_rank_f = ompi_comm_rank_f
 #pragma weak MPI_Comm_rank_f08 = ompi_comm_rank_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_COMM_RANK,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_COMM_RANK,
                            mpi_comm_rank,
                            mpi_comm_rank_,
                            mpi_comm_rank__,
                            ompi_comm_rank_f,
                            (MPI_Fint *comm, MPI_Fint *rank, MPI_Fint *ierr),
                            (comm, rank, ierr) )
-#else
-#define ompi_comm_rank_f pompi_comm_rank_f
-#endif
 #endif
 
 

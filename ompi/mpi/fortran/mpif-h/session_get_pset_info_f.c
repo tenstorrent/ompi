@@ -33,7 +33,7 @@
 
 
 #if OMPI_BUILD_MPI_PROFILING
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak PMPI_SESSION_GET_PSET_INFO = ompi_session_get_pset_info_f
 #pragma weak pmpi_session_get_pset_info = ompi_session_get_pset_info_f
 #pragma weak pmpi_session_get_pset_info_ = ompi_session_get_pset_info_f
@@ -46,13 +46,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SESSION_GET_PSET_INFO,
                             pmpi_session_get_pset_info,
                             pmpi_session_get_pset_info_,
                             pmpi_session_get_pset_info__,
-                            pompi_session_get_pset_info_f,
+                            ompi_session_get_pset_info_f,
                             (MPI_Fint *session, char *pset_name, MPI_Fint *info, MPI_Fint *ierr, int name_len),
                             (session, pset_name, info, ierr, name_len) )
 #endif
 #endif
 
-#if OPAL_HAVE_WEAK_SYMBOLS
+#if OPAL_HAVE_WEAK_ALIASES
 #pragma weak MPI_SESSION_GET_PSET_INFO = ompi_session_get_pset_info_f
 #pragma weak mpi_session_get_pset_info = ompi_session_get_pset_info_f
 #pragma weak mpi_session_get_pset_info_ = ompi_session_get_pset_info_f
@@ -61,17 +61,13 @@ OMPI_GENERATE_F77_BINDINGS (PMPI_SESSION_GET_PSET_INFO,
 #pragma weak MPI_Session_get_pset_info_f = ompi_session_get_pset_info_f
 #pragma weak MPI_Session_get_pset_info_f08 = ompi_session_get_pset_info_f
 #else
-#if ! OMPI_BUILD_MPI_PROFILING
-OMPI_GENERATE_F77_BINDINGS (MPI_SESSION_GET_PSET_INFO,
+OMPI_GENERATE_WEAK_F77_BINDINGS (MPI_SESSION_GET_PSET_INFO,
                             mpi_session_get_pset_info,
                             mpi_session_get_pset_info_,
                             mpi_session_get_pset_info__,
                             ompi_session_get_pset_info_f,
                             (MPI_Fint *session, char *pset_name, MPI_Fint *info, MPI_Fint *ierr, int name_len),
                             (session, pset_name, info, ierr, name_len) )
-#else
-#define ompi_session_get_pset_info_f pompi_session_get_pset_info_f
-#endif
 #endif
 
 void ompi_session_get_pset_info_f(MPI_Fint *session,char *pset_name, MPI_Fint *info, MPI_Fint *ierr, int name_len)
